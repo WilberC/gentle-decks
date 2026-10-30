@@ -1,0 +1,17 @@
+{
+  "name": "gentle-decks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Markdown decks that render to self-contained HTML presentations.",
+  "bin": {
+    "decks": "./bin/decks.js"
+  },
+  "scripts": {
+    "build:sample": "node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html",
+    "check": "node checks/check.mjs"
+  },
+  "dependencies": {
+    "marked": "^15.0.0"
+  }
+}
