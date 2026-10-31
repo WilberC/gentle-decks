@@ -1,0 +1,36 @@
+/* Studio skins. `gentle` = Gentle brand (gentlemanprogramming.com); `flat` = Gentle Shell terminal palette. */
+:root, [data-skin="gentle"] {
+  --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822; --row: #241822; --selection: #342230;
+  --border: #ffffff17; --border-subtle: #ffffff0f; --border-strong: #342230;
+  --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+  --accent: #f095c8; --accent-strong: #ff76c3; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+  --focus: #f095c8; --link: #a9c7ee; --tag: #d7a0b8;
+  --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f; --gold: #e0c27a; --blue: #a9c7ee;
+  --ok-bg: #b4e7c71a; --bad-bg: #ff718f1f;
+  --glow: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), radial-gradient(700px 360px at 95% 0%, #a9c7ee12, transparent 60%);
+  --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r-s: 8px; --r-m: 12px; --r-l: 16px;
+  --primary-bg: var(--accent); --primary-fg: var(--on-accent);
+}
+[data-skin="flat"] {
+  --bg: #06080f; --bg-subtle: #0d0f14; --surface: #0d0f14; --surface-2: #161D2E; --row: #161D2E; --selection: #232A40;
+  --border: #313342; --border-subtle: #232A40; --border-strong: #313342;
+  --text: #F3F6F9; --secondary: #A3B5D6; --muted: #5C6170; --heading: #B5B2D0;
+  --accent: #7FB4CA; --accent-strong: #7FB4CA; --accent-soft: #A3B5D6; --on-accent: #06080f;
+  --focus: #7FB4CA; --link: #7FB4CA; --tag: #B99BF2;
+  --green: #B7CC85; --warning: #DEBA87; --red: #CB7C94; --gold: #E0C15A; --blue: #7FB4CA;
+  --ok-bg: #1a2e1a; --bad-bg: #2e1a1a;
+  --glow: none;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r-s: 4px; --r-m: 6px; --r-l: 8px;
+  --primary-bg: #E0C15A; --primary-fg: #1a1405;
+}
+body { background: var(--glow), var(--bg); }
+
+/* skin switch (top-right of every studio screen) */
+.skin-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: var(--surface); font: 12px var(--mono); }
+.skin-switch button { border: 0; background: none; color: var(--secondary); padding: 4px 12px; border-radius: 999px; cursor: pointer; font: inherit; }
+.skin-switch button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.skin-switch small { opacity: .75; margin-left: 4px; font-weight: 400; }
