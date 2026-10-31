@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { parseFrontmatter, splitSlides, parseSlide } from "../src/parse.js";
+import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../src/parse.js";
 import { renderDeck } from "../src/render.js";
-import { renderDesign, SLIDE_FILE } from "../src/design.js";
+import { renderDesign, SLIDES_DIR } from "../src/design.js";
 
 const USAGE = "usage: decks <deck.md> (-o <out.html> | --design <dir>)";
 
@@ -24,19 +24,21 @@ if (!input || (outFile === undefined) === (designDir === undefined) || !(outFile
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const md = fs.readFileSync(input, "utf8");
 const { meta, body } = parseFrontmatter(md);
-const slides = splitSlides(body).map(parseSlide);
+const parsed = splitSlides(body).map(parseSlide);
 
 const theme = meta.theme || "gentleman-cute";
 const themeCss = fs.readFileSync(path.join(root, "themes", `${theme}.css`), "utf8");
 
 try {
+  const slides = assignIds(parsed);
   if (designDir) {
     const files = renderDesign({ meta, slides }, themeCss);
     const dir = path.resolve(designDir);
-    fs.mkdirSync(dir, { recursive: true });
-    // Drop slide artboards left over from a longer deck; keep canvas files (comments.json, screenshots).
-    for (const name of fs.readdirSync(dir)) {
-      if (SLIDE_FILE.test(name) && !files.has(name)) fs.rmSync(path.join(dir, name));
+    const slidesDir = path.join(dir, SLIDES_DIR);
+    fs.mkdirSync(slidesDir, { recursive: true });
+    // Drop artboards of slides that no longer exist; keep canvas files (comments.json, screenshots).
+    for (const name of fs.readdirSync(slidesDir)) {
+      if (name.endsWith(".html") && !files.has(`${SLIDES_DIR}/${name}`)) fs.rmSync(path.join(slidesDir, name));
     }
     for (const [name, content] of files) fs.writeFileSync(path.join(dir, name), content);
     console.log(`${slides.length} slides -> ${dir}`);

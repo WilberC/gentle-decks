@@ -36,6 +36,21 @@ export function parseSlide(raw) {
   return { directives, body };
 }
 
+export const SLIDE_ID = /^[a-z][a-z0-9-]*$/;
+
+// Gives every slide a stable `id`: its `id:` directive, else `slide-N`.
+// Invalid or duplicate ids throw with the slide number.
+export function assignIds(slides) {
+  const seen = new Set();
+  return slides.map((slide, i) => {
+    const id = slide.directives.id ?? `slide-${i + 1}`;
+    if (!SLIDE_ID.test(id)) throw new Error(`Invalid slide id "${id}" on slide ${i + 1}`);
+    if (seen.has(id)) throw new Error(`Duplicate slide id "${id}" on slide ${i + 1}`);
+    seen.add(id);
+    return { ...slide, id };
+  });
+}
+
 const OPEN = /^:::\s*([\w-]+)\s*(.*)$/;
 const CLOSE = /^:::\s*$/;
 

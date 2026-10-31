@@ -5,9 +5,9 @@ import { esc, renderSlide } from "./render.js";
 
 export const SLIDE_WIDTH = 1600;
 export const SLIDE_HEIGHT = 900;
-export const SLIDE_FILE = /^\d{2,}-slide\.html$/;
-
-export const slideFile = (index) => `${String(index + 1).padStart(2, "0")}-slide.html`;
+// Artboards are named by slide id, so reordering slides keeps canvas comments on their slide.
+export const SLIDES_DIR = "slides";
+export const slideFile = (slide) => `${SLIDES_DIR}/${slide.id}.html`;
 
 // Plain text of the first heading, else the kicker, else "Slide N".
 export function slideTitle({ directives, body }, index) {
@@ -24,7 +24,10 @@ export function slideTitle({ directives, body }, index) {
 }
 
 function renderArtboard(meta, slide, index, total, themeCss) {
-  const section = renderSlide(slide, index, total, { active: true, attrs: ` data-slide="${index + 1}"` });
+  const section = renderSlide(slide, index, total, {
+    active: true,
+    attrs: ` data-slide="${index + 1}" data-slide-id="${esc(slide.id)}"`,
+  });
   return `<!doctype html>
 <html lang="${meta.lang ?? "es"}">
 <head>
@@ -50,7 +53,7 @@ ${section}
 export function renderDesign({ meta, slides }, themeCss) {
   const files = new Map();
   const artboards = slides.map((slide, i) => {
-    const file = slideFile(i);
+    const file = slideFile(slide);
     files.set(file, renderArtboard(meta, slide, i, slides.length, themeCss));
     const num = String(i + 1).padStart(2, "0");
     return { file, title: `${num} · ${slideTitle(slide, i)}`, tradeoff: "", width: SLIDE_WIDTH, height: SLIDE_HEIGHT };
