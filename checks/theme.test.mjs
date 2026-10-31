@@ -50,5 +50,5 @@ test("the contract document lists every checked selector", async () => {
 test("theme without a name prints usage and exits 2", () => {
   const r = run("theme", "check");
   assert.equal(r.code, 2);
-  assert.match(r.stderr, /decks theme check <name>/);
+  assert.match(r.stderr, /decks theme check <name\|path\.css>/);
 });

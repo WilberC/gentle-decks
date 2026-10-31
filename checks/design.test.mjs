@@ -169,6 +169,9 @@ test("missing output target prints usage and exits 2", () => {
     "usage: decks <deck.md> (-o <out.html> | --design <dir>)\n" +
       "       decks plan check <plan.json>\n" +
       "       decks plan scaffold <plan.json> -o <deck.md>\n" +
-      "       decks theme check <name>\n",
+      "       decks theme check <name|path.css>\n" +
+      "       decks studio <deck-dir> [--port N]\n" +
+      "       decks studio requests <deck-dir>\n" +
+      "       decks studio resolve <deck-dir> <id...>\n",
   );
 });

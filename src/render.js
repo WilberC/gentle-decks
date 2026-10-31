@@ -1,7 +1,8 @@
 import { marked } from "marked";
 import { parseContainers } from "./parse.js";
 
-const CONTAINER_NAMES = new Set([
+// Container names the renderer understands: also the layout values a `layout` request may pick.
+export const CONTAINER_NAMES = new Set([
   "grid-2", "grid-3", "grid-4", "split", "steps", "card", "step",
   "term", "bars", "stat", "pills",
 ]);

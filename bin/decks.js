@@ -5,13 +5,18 @@ import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../src/par
 import { renderDeck } from "../src/render.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
-import { missingSelectors, THEME_NAME } from "../src/theme.js";
+import { missingSelectors, findTheme, THEME_NAME } from "../src/theme.js";
+import { openRequests, resolveRequests, studioPaths } from "../src/studio/state.js";
+import { startStudio } from "../src/studio/server.js";
 
 const USAGE = [
   "usage: decks <deck.md> (-o <out.html> | --design <dir>)",
   "       decks plan check <plan.json>",
   "       decks plan scaffold <plan.json> -o <deck.md>",
-  "       decks theme check <name>",
+  "       decks theme check <name|path.css>",
+  "       decks studio <deck-dir> [--port N]",
+  "       decks studio requests <deck-dir>",
+  "       decks studio resolve <deck-dir> <id...>",
 ].join("\n");
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -58,6 +63,13 @@ function planCommand() {
   console.log(`${plan.slides.length} slides -> ${target}`);
 }
 
+// A deck resolves its theme next to itself first (`<deck dir>/themes/<name>.css`), then in the repo.
+function deckTheme(themeName, deckDir) {
+  const theme = findTheme(themeName, deckDir);
+  if (!theme) throw new Error(`theme not found: ${themeName}`);
+  return theme.css;
+}
+
 function buildCommand() {
   const outFile = flagValue("-o");
   const designDir = flagValue("--design");
@@ -67,11 +79,10 @@ function buildCommand() {
   const md = fs.readFileSync(input, "utf8");
   const { meta, body } = parseFrontmatter(md);
   const parsed = splitSlides(body).map(parseSlide);
-  const theme = meta.theme || "gentleman-cute";
-  const themeCss = fs.readFileSync(path.join(root, "themes", `${theme}.css`), "utf8");
 
   try {
     const slides = assignIds(parsed);
+    const themeCss = deckTheme(meta.theme || "gentleman-cute", path.dirname(path.resolve(input)));
     if (designDir) {
       const files = renderDesign({ meta, slides }, themeCss);
       const dir = path.resolve(designDir);
@@ -99,13 +110,15 @@ function buildCommand() {
 function themeCommand() {
   const [, sub, name] = args;
   if (sub !== "check" || !name) usage();
-  if (!THEME_NAME.test(name)) {
+  // `theme check` accepts a theme name or a CSS file path.
+  const asPath = /\.css$/i.test(name);
+  if (!asPath && !THEME_NAME.test(name)) {
     console.error(`invalid theme name ${JSON.stringify(name)}`);
     process.exit(1);
   }
-  const file = path.join(root, "themes", `${name}.css`);
-  if (!fs.existsSync(file)) {
-    console.error(`theme not found: themes/${name}.css`);
+  const file = asPath ? path.resolve(name) : path.join(root, "themes", `${name}.css`);
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    console.error(`theme not found: ${asPath ? name : `themes/${name}.css`}`);
     process.exit(1);
   }
   const missing = missingSelectors(fs.readFileSync(file, "utf8"));
@@ -116,6 +129,54 @@ function themeCommand() {
   console.log(`ok: ${name}`);
 }
 
-if (args[0] === "plan") planCommand();
-else if (args[0] === "theme") themeCommand();
-else buildCommand();
+function main() {
+  if (args[0] === "plan") return planCommand();
+  if (args[0] === "theme") return themeCommand();
+  if (args[0] !== "studio") return buildCommand();
+
+  const sub = args[1];
+  if (sub !== "requests" && sub !== "resolve") return studioServerCommand(sub);
+  const dir = args[2];
+  if (!dir || dir.startsWith("-")) usage();
+  try {
+    if (sub === "requests") {
+      console.log(JSON.stringify(openRequests(studioPaths(dir)), null, 2));
+      return;
+    }
+    const ids = args.slice(3);
+    if (!ids.length) usage();
+    const { unknown } = resolveRequests(studioPaths(dir), ids);
+    if (unknown) {
+      console.error(`unknown request ${unknown}`);
+      process.exit(1);
+    }
+    for (const id of ids) console.log(`resolved ${id}`);
+  } catch (err) {
+    console.error(`studio: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+function studioServerCommand(dir) {
+  if (!dir || dir.startsWith("-")) usage();
+  const planFile = path.join(dir, "plan.json");
+  if (!fs.existsSync(planFile)) {
+    console.error(`studio: ${planFile} not found`);
+    process.exit(1);
+  }
+  const portFlag = flagValue("--port");
+  let port = 0;
+  if (portFlag !== undefined) {
+    port = Number(portFlag);
+    if (!Number.isInteger(port) || port < 0 || port > 65535) usage();
+  }
+  startStudio({ dir, port }).then(
+    (studio) => console.log(`studio: ${studio.url}`),
+    (err) => {
+      console.error(`studio: ${err.message}`);
+      process.exit(1);
+    },
+  );
+}
+
+main();
