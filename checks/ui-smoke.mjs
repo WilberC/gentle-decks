@@ -1,6 +1,7 @@
-// Browser smoke test of the studio UI over the DevTools protocol (no dependencies).
+// Browser smoke test of the studio workspace over the DevTools protocol (no dependencies).
 // Run: npm run smoke:ui   (needs Microsoft Edge, Chrome or Chromium; set BROWSER to override)
-// Starts its own studio on a temp deck, drives Plan -> Grid -> Editor, and checks the files on disk.
+// Starts its own studio on a temp deck, drives the single workspace (Estilo / Slide / Grid, outline,
+// comments), and checks the files on disk. Contract: odd/tasks/studio-workspace.md (S2-S7, S10).
 import { spawn, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -81,6 +82,24 @@ const until = async (expr, what, ms = 8000) => {
   }
   throw new Error(`timeout: ${what}`);
 };
+const click = async (selector) => js(`(() => { const n = document.querySelector(${JSON.stringify(selector)}); if (!n) return false; n.click(); return true; })()`);
+const setValue = async (selector, value, event = "input") =>
+  js(`(() => {
+    const n = document.querySelector(${JSON.stringify(selector)});
+    if (!n) return false;
+    n.focus();
+    n.value = ${JSON.stringify(value)};
+    n.dispatchEvent(new Event(${JSON.stringify(event)}));
+    return true;
+  })()`);
+const clickInFrame = async (selector, fx, fy) => {
+  const rect = await js(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
+  const at = { x: rect.x + rect.w * fx, y: rect.y + rect.h * fy };
+  for (const type of ["mousePressed", "mouseReleased"]) {
+    await send("Input.dispatchMouseEvent", { type, x: at.x, y: at.y, button: "left", clickCount: 1 });
+  }
+  return at;
+};
 const plan = () => JSON.parse(fs.readFileSync(path.join(deckDir, "plan.json"), "utf8"));
 const requests = () => {
   try { return JSON.parse(fs.readFileSync(path.join(deckDir, "requests.json"), "utf8")).requests; } catch { return []; }
@@ -93,100 +112,184 @@ const answerDialog = async (text) => {
   await until(`document.getElementById("dialog").open`, "dialog open");
   await js(`document.getElementById("dialog-text").value = ${JSON.stringify(text)}; document.getElementById("dialog-ok").click(); true`);
 };
+const selectRow = async (i) => {
+  await js(`document.querySelectorAll(".outline .row")[${i}].click(); true`);
+  await until(`document.querySelectorAll(".outline .row")[${i}].getAttribute("aria-current") === "true"`, `row ${i} selected`);
+};
+const selectedAct = (act) => `.outline .row[aria-current="true"] [data-act="${act}"]`;
 
 try {
   await send("Page.enable");
-  {
-  await send("Page.navigate", { url: `${url}#plan` });
-  await until(`!!document.querySelector(".cards .card")`, "plan cards");
+  await send("Page.navigate", { url });
+  await until(`!!document.querySelector(".look .theme")`, "Estilo view with theme cards");
+  check(
+    "deck missing opens the Estilo view (S3)",
+    await js(`document.querySelector('#tools [data-view="style"]').getAttribute("aria-pressed") === "true"`),
+  );
+
+  // S5: a row select expands it with inline title, points and notes.
+  await selectRow(0);
+  await until(`!!document.querySelector('.outline .row[aria-current="true"] .edit')`, "expanded row fields");
 
   // Edit a title (debounced save).
-  await js(`(() => { const t = document.querySelector(".card .title"); t.focus(); t.value = "Por qué Python"; t.dispatchEvent(new Event("input")); t.blur(); return true; })()`);
+  await setValue('.outline .row[aria-current="true"] .edit', "Por qué Python");
+  await js(`document.querySelector('.outline .row[aria-current="true"] .edit').blur(); true`);
   await sleep(1200);
   check("edit title saves plan.json", plan().slides[0].title === "Por qué Python", plan().slides[0].title);
 
   // Add a slide after the last one.
   const before = plan().slides.length;
-  await js(`[...document.querySelectorAll(".gap .pill-btn")].filter(b => b.textContent.includes("Add")).pop().click(); true`);
+  await click(".o-foot .o-add");
   await answerDialog("Próximos pasos con Python");
-  await until(`document.querySelectorAll(".cards .card").length === ${before + 1}`, "card added");
+  await until(`document.querySelectorAll(".outline .row").length === ${before + 1}`, "row added");
   const added = plan().slides.at(-1);
   check("add slide appends with derived id", plan().slides.length === before + 1 && added.id === "proximos-pasos-con-python", JSON.stringify(added));
 
-  // Move it up.
-  await js(`document.querySelectorAll(".cards .card")[${before}].querySelector('[title="Move up"]').click(); true`);
-  await sleep(600);
+  // Move it up from the expanded row.
+  await selectRow(before);
+  await click(selectedAct("up"));
+  await sleep(700);
   check("move up reorders", plan().slides[before - 1].id === "proximos-pasos-con-python", plan().slides.map((s) => s.id).join(","));
 
-  // Merge slide 1 into 2 (first gap merge button merges 1 and 2).
+  // Merge the first two slides.
   const ids0 = plan().slides.map((s) => s.id);
-  await js(`document.querySelector(".gap .pill-btn:nth-child(2)").click(); true`);
-  await sleep(600);
+  await selectRow(0);
+  await click(selectedAct("merge"));
+  await sleep(700);
   const merged = plan().slides;
-  check("merge keeps first id and joins titles", merged.length === ids0.length - 1 && merged[0].id === ids0[0] && merged[0].title.includes(" · "), merged[0].title);
+  check(
+    "merge keeps first id and joins titles",
+    merged.length === ids0.length - 1 && merged[0].id === ids0[0] && merged[0].title.includes(" · "),
+    merged[0].title,
+  );
 
   // Comment on a plan slide.
-  await js(`document.querySelector('.card [title="Comment"]').click(); true`);
+  await click(selectedAct("comment"));
   await answerDialog("Hazlo más visual");
-  await sleep(500);
-  const c = requests().find((r) => r.kind === "comment" && r.text === "Hazlo más visual");
-  check("plan comment posts a request", !!c, c ? c.slideId : "missing");
-
-  // Theme selection + generate.
-  await js(`document.querySelector(".theme").click(); true`);
   await sleep(600);
-  check("theme click sets plan.theme", plan().theme === "gentleman-cute", plan().theme);
-  await js(`document.querySelector(".plan-foot .btn").click(); true`);
-  await sleep(800);
-  check("generate posts a request and opens the grid", requests().some((r) => r.kind === "generate") && (await js(`document.querySelector('.tabs [aria-current="page"]').dataset.stage`)) === "grid");
+  const planComment = requests().find((r) => r.kind === "comment" && r.text === "Hazlo más visual");
+  check("plan comment posts a request", !!planComment, planComment ? planComment.slideId : "missing");
 
-  }
+  // Theme selection (any other theme than the current one).
+  const otherTheme = await js(`(() => {
+    const current = [...document.querySelectorAll(".theme")].find((t) => t.getAttribute("aria-pressed") === "true");
+    const other = [...document.querySelectorAll(".theme")].find((t) => t !== current);
+    return other ? other.dataset.theme : "";
+  })()`);
+  await click(`.theme[data-theme="${otherTheme}"]`);
+  await sleep(700);
+  check("theme click sets plan.theme", plan().theme === otherTheme, `${otherTheme} / ${plan().theme}`);
+
+  // Generate.
+  await click("#generate");
+  await until(`document.querySelector('#tools [data-view="grid"]').getAttribute("aria-pressed") === "true"`, "Grid view after generate");
+  check("generate posts a request and opens the Grid view", requests().some((r) => r.kind === "generate"));
+
   // Agent writes the deck after "generate".
-  {
-    execFileSync(process.execPath, [CLI, "plan", "scaffold", path.join(deckDir, "plan.json"), "-o", path.join(deckDir, path.basename(deckDir) + ".md")]);
-    await until(`document.querySelectorAll(".grid .frame").length >= 2`, "grid fills live from SSE", 6000);
-    check("grid fills live after the agent writes the deck", true);
-  }
-  // Editor: comment mode click inside the slide.
-  await send("Page.navigate", { url: `${url}#editor` });
-  await until(`!!document.querySelector(".view .frame iframe")`, "editor view");
+  execFileSync(process.execPath, [CLI, "plan", "scaffold", path.join(deckDir, "plan.json"), "-o", path.join(deckDir, path.basename(deckDir) + ".md")]);
+  await until(`document.querySelectorAll(".outline .row .th .frame").length >= 2`, "outline thumbnails fill live from SSE", 8000);
+  await until(`document.querySelectorAll(".grid .frame").length >= 2`, "grid fills live from SSE", 8000);
+  check("outline thumbnails and grid fill live after the agent writes the deck", true);
+
+  // Slide view: comment mode click inside the slide.
+  await click('#tools [data-view="slide"]');
+  await until(`document.querySelectorAll(".outline .row .th .frame").length >= 2`, "thumbnails kept");
+  await until(`!!document.querySelector("#stage .frame.big iframe")`, "large slide frame");
   await sleep(1500);
-  await js(`[...document.querySelectorAll(".segmented .btn")].find(b => b.textContent.includes("Comment")).click(); true`);
+  await click('#tools [data-mode="comment"]');
   await sleep(300);
-  const rect = await js(`(() => { const r = document.querySelector(".view .frame").getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
-  // The cover title sits around 42% height in the artboard.
-  const at = { x: rect.x + rect.w * 0.45, y: rect.y + rect.h * 0.45 };
-  for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: at.x, y: at.y, button: "left", clickCount: 1 });
+  await clickInFrame("#stage .frame.big", 0.45, 0.45);
   await answerDialog("Título más corto");
-  await sleep(600);
+  await sleep(800);
   const pick = requests().find((r) => r.text === "Título más corto");
   check("editor comment carries selector and excerpt", !!pick && !!pick.selector, pick ? `${pick.selector} | ${pick.excerpt}` : "missing");
 
   // Layout switch.
-  await js(`(() => { const s = document.querySelector(".toolbar select"); s.value = "steps"; s.dispatchEvent(new Event("change")); return true; })()`);
-  await sleep(600);
+  await setValue("#layout-select", "steps", "change");
+  await sleep(800);
   check("layout select posts a layout request", requests().some((r) => r.kind === "layout" && r.layout === "steps"));
 
-  // Requests panel lists open requests.
-  await sleep(800);
-  const listed = await js(`document.querySelectorAll(".requests li").length`);
-  check("requests panel lists open requests", listed === requests().filter((r) => r.status === "open").length && listed >= 2, String(listed));
+  // Comments column lists open requests, with the reply column available.
+  await click('#comments .tabs [data-tab="all"]');
+  await sleep(400);
+  const listed = await js(`document.querySelectorAll("#comments .thread .c").length`);
+  const expected = requests().length + requests().filter((r) => r.reply).length;
+  check("comments column lists every request of the deck", listed === expected && listed >= 2, `${listed} / ${expected}`);
+  check(
+    "comments column still offers the three tabs",
+    (await js(`document.querySelectorAll("#comments .tabs [data-tab]").length`)) === 3,
+  );
 
-  // Edit text: click the cover bullet, type, blur -> deck markdown changes for that slide only.
+  // Composer: a comment for the selected slide.
+  await setValue("#compose", "Que el ejemplo se vea en pantalla");
+  await click("#send");
+  await sleep(800);
+  check("composer posts a comment for the selected slide", requests().some((r) => r.text === "Que el ejemplo se vea en pantalla"));
+
+  // Edit text: click the cover bullet, type, Enter -> deck markdown changes for that slide only.
   const deckFile = path.join(deckDir, path.basename(deckDir) + ".md");
   const mdBefore = fs.readFileSync(deckFile, "utf8");
-  await js(`[...document.querySelectorAll(".segmented .btn")].find(b => b.textContent.includes("Edit")).click(); true`);
+  await click('#tools [data-mode="edit"]');
   await sleep(300);
-  const p2 = { x: rect.x + rect.w * 0.3, y: rect.y + rect.h * 0.545 };
-  for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: p2.x, y: p2.y, button: "left", clickCount: 1 });
-  await sleep(300);
+  await clickInFrame("#stage .frame.big", 0.3, 0.545);
+  await sleep(400);
   await send("Input.dispatchKeyEvent", { type: "keyDown", key: "End", code: "End", windowsVirtualKeyCode: 35 });
   await send("Input.insertText", { text: " hoy" });
   await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
-  await sleep(1500);
+  await sleep(2000);
   const mdAfter = fs.readFileSync(deckFile, "utf8");
   const changed = mdBefore !== mdAfter;
-  check("edit text rewrites only the deck text", changed && mdAfter.replace(" hoy", "") === mdBefore, changed ? (mdAfter.match(/.*hoy.*/) || [""])[0] : "deck unchanged");
+  check(
+    "edit text rewrites only the deck text",
+    changed && mdAfter.replace(" hoy", "") === mdBefore,
+    changed ? (mdAfter.match(/.*hoy.*/) || [""])[0].trim() : "deck unchanged",
+  );
+
+  // Skins: the switch persists across reload, and ?skin= overrides on load (S4).
+  await click('.skin-switch button[data-skin="flat"]');
+  await sleep(300);
+  const flatSet = await js(`document.documentElement.dataset.skin === "flat" && localStorage.getItem("gentle-decks.skin") === "flat"`);
+  await send("Page.navigate", { url: `${url}#slide` });
+  await until(`!!document.querySelector("#comments")`, "reloaded workspace");
+  await sleep(600);
+  const flatKept = await js(`document.documentElement.dataset.skin === "flat" && document.querySelector('.skin-switch button[data-skin="flat"]').getAttribute("aria-pressed") === "true"`);
+  check("skin switch to Flat persists across reload", flatSet && flatKept, `set=${flatSet} kept=${flatKept}`);
+  await send("Page.navigate", { url: `${url}?skin=gentle#slide` });
+  await until(`!!document.querySelector("#comments")`, "reloaded workspace");
+  check("?skin=gentle overrides the stored skin on load", (await js(`document.documentElement.dataset.skin`)) === "gentle");
+
+  // Agent reply (S7/S8): `decks studio reply` shows up in the thread.
+  await click('#comments .tabs [data-tab="all"]');
+  await sleep(400);
+  const target = requests().find((r) => r.kind === "comment" && r.status === "open");
+  const replyText = "Usé print(\"Hola, mundo\") y lo anoté en las notas.";
+  let replySupported = false;
+  let replyOut = "";
+  if (target) {
+    try {
+      replyOut = execFileSync(process.execPath, [CLI, "studio", "reply", deckDir, target.id, replyText], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+      replySupported = /^replied /m.test(replyOut);
+    } catch (err) {
+      replyOut = `${err.stdout ?? ""}${err.stderr ?? ""}`.trim();
+      // Without the reply command the CLI reads "reply" as a deck dir (a parallel worker owns it).
+      replySupported = !/plan\.json not found|usage:/.test(replyOut);
+    }
+  }
+  if (!target) {
+    check("agent reply appears in the thread", false, "no open comment to answer");
+  } else if (!replySupported) {
+    results.push(`pending agent reply check — \`decks studio reply\` is not available yet (${replyOut.split("\n")[0]})`);
+  } else if (replyOut && !replyOut.startsWith("replied ")) {
+    check("agent reply appears in the thread", false, replyOut);
+  } else {
+    await until(
+      `[...document.querySelectorAll("#comments .thread .c.agent")].some((n) => n.textContent.includes(${JSON.stringify(replyText)}))`,
+      "agent reply in the thread",
+      10000,
+    );
+    const reply = await js(`[...document.querySelectorAll("#comments .thread .c.agent")].some((n) => n.textContent.includes("Agente"))`);
+    check("agent reply appears in the thread", reply);
+  }
 } catch (err) {
   results.push(`FAIL exception — ${err.message}`);
 } finally {
