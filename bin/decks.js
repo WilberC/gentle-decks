@@ -5,11 +5,13 @@ import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../src/par
 import { renderDeck } from "../src/render.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
+import { missingSelectors, THEME_NAME } from "../src/theme.js";
 
 const USAGE = [
   "usage: decks <deck.md> (-o <out.html> | --design <dir>)",
   "       decks plan check <plan.json>",
   "       decks plan scaffold <plan.json> -o <deck.md>",
+  "       decks theme check <name>",
 ].join("\n");
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -94,5 +96,26 @@ function buildCommand() {
   }
 }
 
+function themeCommand() {
+  const [, sub, name] = args;
+  if (sub !== "check" || !name) usage();
+  if (!THEME_NAME.test(name)) {
+    console.error(`invalid theme name ${JSON.stringify(name)}`);
+    process.exit(1);
+  }
+  const file = path.join(root, "themes", `${name}.css`);
+  if (!fs.existsSync(file)) {
+    console.error(`theme not found: themes/${name}.css`);
+    process.exit(1);
+  }
+  const missing = missingSelectors(fs.readFileSync(file, "utf8"));
+  if (missing.length) {
+    console.error(`missing selectors in ${name}: ${missing.join(", ")}`);
+    process.exit(1);
+  }
+  console.log(`ok: ${name}`);
+}
+
 if (args[0] === "plan") planCommand();
+else if (args[0] === "theme") themeCommand();
 else buildCommand();

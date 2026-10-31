@@ -168,6 +168,7 @@ test("missing output target prints usage and exits 2", () => {
     r.stderr,
     "usage: decks <deck.md> (-o <out.html> | --design <dir>)\n" +
       "       decks plan check <plan.json>\n" +
-      "       decks plan scaffold <plan.json> -o <deck.md>\n",
+      "       decks plan scaffold <plan.json> -o <deck.md>\n" +
+      "       decks theme check <name>\n",
   );
 });
