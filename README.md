@@ -14,8 +14,21 @@ shows the result).
 ```bash
 npm install
 node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html
-node checks/check.mjs   # structural checks + determinism + failure modes
+node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks
+npm run check           # structural checks, determinism, failure modes, design mode
 ```
+
+`-o` writes the navigable presentation. `--design <dir>` writes one static
+artboard per slide (`NN-slide.html`, 1600×900) plus `design.json`, so the
+gentle-design canvas previews every slide and canvas comments name the slide
+they belong to. Rebuilding removes stale slide files and keeps `comments.json`.
+
+## Agent workflow
+
+[`skill/gentle-decks/SKILL.md`](skill/gentle-decks/SKILL.md) is the
+Gamma-style flow for gentle-shell: brief → outline approval → markdown →
+canvas preview → apply canvas comments to the slide's markdown → final HTML.
+It lives here until it ships in the Pi plugin.
 
 Open the generated HTML in a browser: arrows/swipe/click to navigate,
 `F` fullscreen, `P` exports one slide per page to PDF.
@@ -37,7 +50,10 @@ produces a silently broken deck.
 | `bin/decks.js` | CLI entry |
 | `src/parse.js` | Frontmatter, slide splitting, container tree |
 | `src/render.js` | Markdown and containers → slide HTML |
+| `src/design.js` | Per-slide canvas artboards and `design.json` |
 | `src/deck-nav.js` | Inlined navigation engine (keyboard, swipe, print) |
 | `themes/` | Deck themes (one CSS file each) |
 | `decks/sample/` | Sample deck used as the format fixture |
-| `checks/` | Structural verification |
+| `checks/` | Structural verification and design-mode tests |
+| `skill/gentle-decks/` | Agent skill (not installed yet) |
+| `odd/tasks/` | Feature specs and task log |

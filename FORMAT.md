@@ -10,6 +10,7 @@ A deck is one markdown file that renders to one self-contained HTML file
 title: Deck title
 theme: gentleman-cute   # themes/<name>.css
 brand: gentle-decks     # bottom-left brand, optional
+brief: One-line purpose # canvas design.json brief, optional
 lang: es
 ---
 
@@ -101,8 +102,16 @@ class:
 
 ## Renderer contract
 
-- `node bin/decks.js <deck.md> [-o out.html]` writes the HTML file and prints
-  the output path plus the slide count.
+- `node bin/decks.js <deck.md> -o <out.html>` writes the HTML file and prints
+  `<N> slides -> <absolute path>`.
+- `node bin/decks.js <deck.md> --design <dir>` writes `NN-slide.html` per slide
+  (static, no script, 1600×900, `data-slide="N"` on the section) plus
+  `design.json` for the gentle-design canvas. Slide `NN` is the NN-th slide of
+  the markdown, cover included. Stale `NN-slide.html` files are removed; other
+  files such as `comments.json` are kept.
+- Exactly one of `-o` or `--design` is required; otherwise the CLI prints
+  `usage: decks <deck.md> (-o <out.html> | --design <dir>)` and exits 2.
 - Same input → byte-identical output (deterministic; no timestamps).
-- Unknown container names fail the build with the slide number, so a typo in
-  the markdown never produces a silently broken deck.
+- Unknown container names fail the build with the slide number (exit 1,
+  nothing written), so a typo in the markdown never produces a silently
+  broken deck.
