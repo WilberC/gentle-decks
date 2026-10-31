@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es" data-skin="gentle">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Studio · Workspace · armando la estructura</title>
+<style>
+/*@skins*/
+/* Studio skins. `gentle` = Gentle brand (gentlemanprogramming.com); `flat` = Gentle Shell terminal palette. */
+:root, [data-skin="gentle"] {
+  --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822; --row: #241822; --selection: #342230;
+  --border: #ffffff17; --border-subtle: #ffffff0f; --border-strong: #342230;
+  --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+  --accent: #f095c8; --accent-strong: #ff76c3; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+  --focus: #f095c8; --link: #a9c7ee; --tag: #d7a0b8;
+  --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f; --gold: #e0c27a; --blue: #a9c7ee;
+  --ok-bg: #b4e7c71a; --bad-bg: #ff718f1f;
+  --glow: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), radial-gradient(700px 360px at 95% 0%, #a9c7ee12, transparent 60%);
+  --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r-s: 8px; --r-m: 12px; --r-l: 16px;
+  --primary-bg: var(--accent); --primary-fg: var(--on-accent);
+}
+[data-skin="flat"] {
+  --bg: #06080f; --bg-subtle: #0d0f14; --surface: #0d0f14; --surface-2: #161D2E; --row: #161D2E; --selection: #232A40;
+  --border: #313342; --border-subtle: #232A40; --border-strong: #313342;
+  --text: #F3F6F9; --secondary: #A3B5D6; --muted: #5C6170; --heading: #B5B2D0;
+  --accent: #7FB4CA; --accent-strong: #7FB4CA; --accent-soft: #A3B5D6; --on-accent: #06080f;
+  --focus: #7FB4CA; --link: #7FB4CA; --tag: #B99BF2;
+  --green: #B7CC85; --warning: #DEBA87; --red: #CB7C94; --gold: #E0C15A; --blue: #7FB4CA;
+  --ok-bg: #1a2e1a; --bad-bg: #2e1a1a;
+  --glow: none;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r-s: 4px; --r-m: 6px; --r-l: 8px;
+  --primary-bg: #E0C15A; --primary-fg: #1a1405;
+}
+body { background: var(--glow), var(--bg); }
+
+/* skin switch (top-right of every studio screen) */
+.skin-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: var(--surface); font: 12px var(--mono); }
+.skin-switch button { border: 0; background: none; color: var(--secondary); padding: 4px 12px; border-radius: 999px; cursor: pointer; font: inherit; }
+.skin-switch button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.skin-switch small { opacity: .75; margin-left: 4px; font-weight: 400; }
+/*@end-skins*/
+/*@workspace*/
+/* Unified workspace: outline (left, always visible) · slide (center) · comments (right). Uses skin variables only. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 900px; width: 1440px; overflow: hidden; }
+body { color: var(--text); font: 14px/1.45 var(--sans); display: grid; grid-template-rows: 52px 1fr 30px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd { font: 11px var(--mono); }
+
+.top { display: flex; align-items: center; gap: 18px; padding: 0 20px; border-bottom: 1px solid var(--border-subtle); }
+.logo { font: 700 15px var(--mono); color: var(--accent); }
+.logo span { color: var(--text); }
+.deck { font: 600 15px var(--sans); }
+.deck small { font: 12px var(--mono); color: var(--secondary); margin-left: 8px; font-weight: 400; }
+.progress { width: 180px; height: 4px; border-radius: 4px; background: var(--border-subtle); overflow: hidden; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-soft)); }
+.top .grow { flex: 1; }
+.btn { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-s); padding: 6px 12px; font-size: 13px; }
+.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); font-weight: 700; }
+
+.ws { display: grid; grid-template-columns: 420px 1fr 300px; min-height: 0; }
+
+/* left: outline, always visible */
+.outline { border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; min-height: 0; background: var(--bg-subtle); }
+.o-head { padding: 16px 18px 10px; }
+.eyebrow { font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+.o-head p { margin: 0; font-size: 12.5px; color: var(--secondary); }
+.o-head p b { color: var(--text); font-weight: 500; }
+.rows { list-style: none; margin: 0; padding: 0 10px 10px; display: grid; gap: 6px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 26px 88px 1fr; gap: 0 10px; padding: 8px; border: 1px solid transparent; border-radius: var(--r-m); align-items: start; }
+.row:hover { background: var(--surface); }
+.row .n { font: 12px var(--mono); color: var(--accent); padding-top: 3px; }
+.row h3 { font: 600 13.5px/1.3 var(--sans); margin: 0; }
+.row .sub { display: flex; gap: 6px; align-items: center; margin-top: 4px; font: 11px var(--mono); color: var(--secondary); flex-wrap: wrap; }
+.tag { color: var(--tag); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; }
+.st { padding: 0 6px; border-radius: 4px; }
+.st.ok { color: var(--green); background: var(--ok-bg); }
+.st.w { color: var(--accent); background: var(--surface-2); }
+.st.over { color: var(--red); background: var(--bad-bg); }
+.st.p { color: var(--muted); border: 1px dashed var(--border); }
+.cm { color: var(--warning); }
+.row.sel { background: var(--surface-2); border-color: var(--accent); }
+.row .points { grid-column: 3; margin: 6px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--secondary); }
+.row .points li::before { content: "· "; color: var(--accent); }
+.row .edit { grid-column: 3; margin-top: 6px; border: 1px solid var(--accent); border-radius: var(--r-s); background: var(--bg); padding: 4px 8px; font: 12.5px var(--sans); color: var(--text); }
+.row .edit::after { content: "|"; color: var(--accent); margin-left: 1px; }
+.row .note { grid-column: 3; margin-top: 6px; font: 11.5px var(--mono); color: var(--gold); }
+.row .note::before { content: "nota › "; color: var(--muted); }
+.row .acts { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font: 11.5px var(--mono); color: var(--secondary); }
+.row .acts kbd { color: var(--accent); }
+.gap { display: flex; justify-content: center; gap: 6px; margin: -2px 0; }
+.gap span { font: 11px var(--mono); padding: 1px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--secondary); }
+.o-foot { margin-top: auto; padding: 10px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--secondary); }
+.o-foot b { color: var(--accent); font-weight: 400; }
+
+/* thumbnails and slides (deck theme: Fair Test, independent of the skin) */
+.th { width: 88px; aspect-ratio: 16 / 9; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.th.pending { background: repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--bg) 6px 12px); }
+.th.writing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fair { background: #fff; color: #1b1b3a; display: flex; flex-direction: column; justify-content: center; padding: 8%; }
+.fair b { font: 900 8px/1.05 ui-rounded, "SF Pro Rounded", system-ui, sans-serif; letter-spacing: -.02em; }
+.fair i { display: block; width: 26px; height: 5px; border-radius: 4px; margin-bottom: 4px; }
+
+/* center */
+.center { display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+.tools { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+.seg { display: flex; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; }
+.seg button { border: 0; background: none; padding: 5px 11px; color: var(--secondary); font-size: 13px; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--accent); }
+.tools select { font: 12.5px var(--mono); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-s); padding: 5px 8px; }
+.tools .grow { flex: 1; }
+.stage { flex: 1; display: grid; place-items: center; padding: 18px 22px; min-height: 0; }
+.caption { display: flex; justify-content: space-between; padding: 8px 18px; border-top: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
+.caption b { color: var(--text); font-weight: 400; }
+
+/* right: comments & requests */
+.side { border-left: 1px solid var(--border-subtle); background: var(--bg-subtle); display: flex; flex-direction: column; min-height: 0; }
+.s-title { display: flex; justify-content: space-between; padding: 14px 14px 8px; font: 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--heading); }
+.s-title span:last-child { letter-spacing: 0; color: var(--secondary); text-transform: none; }
+.tabs { display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid var(--border-subtle); font: 12px var(--mono); }
+.tabs span { padding: 6px 0; color: var(--secondary); white-space: nowrap; }
+.tabs { gap: 12px; }
+.tabs span.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.thread { list-style: none; margin: 0; padding: 12px 14px; display: grid; gap: 10px; overflow: hidden; }
+.c { border: 1px solid var(--border); border-radius: var(--r-m); padding: 9px 11px; background: var(--surface); font-size: 13px; }
+.c .who { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--secondary); margin-bottom: 4px; }
+.c .who b { color: var(--accent); font-weight: 600; }
+.c .on { font: 11px var(--mono); color: var(--tag); display: block; margin-bottom: 4px; }
+.c.agent { border-color: var(--border-subtle); background: var(--bg); }
+.c.agent .who b { color: var(--green); }
+.c.done { opacity: .6; }
+.c.done .who span::after { content: " · resuelto"; color: var(--green); }
+.compose { margin: auto 14px 12px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--bg); padding: 8px 10px; font-size: 13px; color: var(--muted); }
+.compose .row2 { display: flex; justify-content: space-between; margin-top: 8px; font: 11px var(--mono); color: var(--secondary); }
+.compose .row2 span.go { color: var(--accent); }
+
+.status { display: flex; align-items: center; gap: 18px; padding: 0 20px; border-top: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
+.status .ok { color: var(--green); }
+.status .req { color: var(--warning); }
+.status .right { margin-left: auto; display: flex; gap: 16px; }
+.status kbd { color: var(--text); }
+/*@end-workspace*/
+  .look { width: 100%; max-width: 760px; display: grid; gap: 14px; }
+  .look h2 { margin: 0; font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--heading); display: flex; justify-content: space-between; }
+  .look h2 a { color: var(--link); letter-spacing: 0; text-transform: none; text-decoration: none; }
+  .themes { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .theme { border: 1px solid var(--border); border-radius: var(--r-m); padding: 10px; background: var(--surface); text-align: left; }
+  .theme.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .theme .name { display: flex; justify-content: space-between; margin-top: 8px; font: 12.5px var(--mono); }
+  .theme .name small { color: var(--secondary); }
+  .big { aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; }
+  .big.fair { padding: 7% 8%; }
+  .big.fair b { font-size: 26px; }
+  .big.fair i { width: 64px; height: 8px; margin-bottom: 10px; }
+  .big.fair .dots { display: flex; gap: 4px; margin-top: 12px; } .big.fair .dots span { width: 22px; height: 6px; border-radius: 6px; }
+  .big.gentle { background: radial-gradient(120% 80% at 10% -10%, #f095c833, transparent 60%), #140a12; color: #f6eff3; padding: 7% 8%; display: flex; flex-direction: column; justify-content: center; }
+  .big.gentle b { font: 800 26px/1.05 "Inter", system-ui, sans-serif; letter-spacing: -.03em; }
+  .big.gentle em { color: #f095c8; font-style: normal; }
+  .big.gentle small { font: 9px var(--mono); letter-spacing: .2em; color: #f095c8; margin-bottom: 8px; }
+  .gen-row { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+  .gen { flex: 1; background: var(--primary-bg); color: var(--primary-fg); border: 0; border-radius: var(--r-m); padding: 13px 16px; font: 700 15px var(--sans); display: flex; justify-content: space-between; }
+  .gen kbd { opacity: .75; }
+  .gen-row p { margin: 0; font: 12px var(--mono); color: var(--secondary); max-width: 260px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="logo">gentle<span>·decks</span></span>
+  <span class="deck">Por qué empezar con Python<small>decks/demo</small></span>
+  <span class="grow"></span>
+  <span style="font:12px var(--mono);color:var(--secondary)">plan · 0 / 8 escritas</span>
+  <button class="btn">Present ▶</button>
+  <div class="skin-switch" role="group" aria-label="Estilo"><button data-skin="gentle" aria-pressed="true">Gentle</button><button data-skin="flat" aria-pressed="false">Flat</button></div>
+</header>
+
+<div class="ws">
+  <nav class="outline" aria-label="Esquema">
+    <div class="o-head">
+      <p class="eyebrow">Estructura</p>
+      <p>Para <b>Estudiantes sin experiencia</b> · <b>Confianza para empezar</b></p>
+    </div>
+    <ol class="rows">
+      <li class="row"><span class="n">01</span><div class="th pending"></div><div><h3>Por qué empezar con Python</h3><div class="sub"><span class="tag">cover</span><span class="st p">pendiente</span></div></div></li>
+      <li class="row sel"><span class="n">02</span><div class="th pending"></div><div><h3>La primera victoria llega rápido</h3><div class="sub"><span class="tag">grid-2</span><span class="cm">● 1 comentario</span></div></div>
+        <div class="edit">Sintaxis clara y fácil de leer</div>
+        <ul class="points"><li>Un programa corto produce algo visible desde el primer día</li></ul>
+        <p class="note">usar el ejemplo de print("Hola, mundo")</p>
+        <div class="acts"><span><kbd>e</kbd> editar</span><span><kbd>↑↓</kbd> mover</span><span><kbd>m</kbd> combinar</span><span><kbd>c</kbd> comentar</span><span><kbd>⌫</kbd> borrar</span></div></li>
+      <li class="gap"><span>+ añadir</span><span>combinar</span></li>
+      <li class="row"><span class="n">03</span><div class="th pending"></div><div><h3>Leer el código se parece a leer una idea</h3><div class="sub"><span class="tag">term</span></div></div></li>
+      <li class="row"><span class="n">04</span><div class="th pending"></div><div><h3>Aprendes conceptos que sirven en cualquier lenguaje</h3><div class="sub"><span class="tag">steps</span></div></div></li>
+      <li class="row"><span class="n">05</span><div class="th pending"></div><div><h3>La biblioteca estándar amplía tus posibilidades</h3><div class="sub"><span class="tag">card</span></div></div></li>
+      <li class="row"><span class="n">06</span><div class="th pending"></div><div><h3>Puedes pasar de ejercicios a proyectos reales</h3><div class="sub"><span class="tag">grid-3</span></div></div></li>
+    </ol>
+    <div class="o-foot"><span>8 diapositivas</span><b>+ añadir diapositiva</b></div>
+  </nav>
+
+  <main class="center" aria-label="Aspecto visual">
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Vista"><button aria-pressed="true" title="Look &amp; feel">Estilo</button><button aria-pressed="false">Slide</button><button aria-pressed="false">Grid</button></div>
+      <span class="grow"></span>
+      <span style="font:12px var(--mono);color:var(--secondary)">las vistas previas usan tu esquema</span>
+    </div>
+    <div class="stage">
+      <section class="look">
+        <h2><span>Elige el estilo</span><a href="#">Ver todas las plantillas →</a></h2>
+        <div class="themes">
+          <button class="theme on" aria-pressed="true">
+            <div class="big fair"><i style="background:#2f6bff"></i><b>Por qué empezar con <span style="color:#2f6bff">Python</span></b><div class="dots"><span style="background:#ff5a5f"></span><span style="background:#ffb020"></span><span style="background:#22c55e"></span><span style="background:#2f6bff"></span><span style="background:#8b5cf6"></span></div></div>
+            <div class="name"><span>fair-test</span><small>plantilla</small></div>
+          </button>
+          <button class="theme" aria-pressed="false">
+            <div class="big gentle"><small>DECKS · PYTHON</small><b>Por qué empezar con <em>Python</em></b></div>
+            <div class="name"><span>fair-test-gentle</span><small>plantilla</small></div>
+          </button>
+        </div>
+        <div class="gen-row">
+          <button class="gen"><span>✦ Generar las 8 diapositivas</span><kbd>⌘↵</kbd></button>
+          <p>Se escriben en orden; cada fila del esquema muestra su miniatura en cuanto está lista.</p>
+        </div>
+      </section>
+    </div>
+    <div class="caption"><span>El esquema siempre queda a la izquierda · <b>e</b> editar · <b>c</b> comentar</span><span>plan.json guardado</span></div>
+  </main>
+
+  <aside class="side" aria-label="Comentarios">
+    <div class="s-title"><span>Comentarios</span><span>02 · first-win</span></div>
+    <div class="tabs"><span class="on">Esta · 2</span><span>Todas · 3</span><span>Agente</span></div>
+    <ul class="thread">
+      <li class="c"><div class="who"><b>Tú</b><span>hace 2 min</span></div>Que el ejemplo sea algo que se vea en pantalla, no solo una suma.</li>
+      <li class="c agent"><div class="who"><b>Agente</b><span>hace 1 min</span></div>Usaré <code>print("Hola, mundo")</code> y una salida visible. Lo anoté en las notas de la diapositiva.</li>
+    </ul>
+    <div class="compose">Comentar en la diapositiva 02…<div class="row2"><span>⌘↵ enviar al agente</span><span class="go">enviar</span></div></div>
+  </aside>
+</div>
+
+<footer class="status" aria-label="Estado">
+  <span class="ok">● agente conectado</span>
+  <span>8 diapositivas · 0 escritas</span>
+  <span class="req">1 comentario abierto</span>
+  <span class="right"><span><kbd>?</kbd> atajos</span><span><kbd>/</kbd> orden</span></span>
+</footer>
+<!--@switch-js--><script>
+// Skin toggle for studio artboards: gentle (brand) / flat (Gentle Shell terminal).
+document.querySelectorAll(".skin-switch button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.documentElement.dataset.skin = b.dataset.skin;
+    document.querySelectorAll(".skin-switch button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  });
+});
+</script><!--@end-switch-js-->
+</body>
+</html>

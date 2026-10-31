@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="es" data-skin="gentle">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Studio · Workspace · generando y editando</title>
+<style>
+/*@skins*/
+/* Studio skins. `gentle` = Gentle brand (gentlemanprogramming.com); `flat` = Gentle Shell terminal palette. */
+:root, [data-skin="gentle"] {
+  --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822; --row: #241822; --selection: #342230;
+  --border: #ffffff17; --border-subtle: #ffffff0f; --border-strong: #342230;
+  --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+  --accent: #f095c8; --accent-strong: #ff76c3; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+  --focus: #f095c8; --link: #a9c7ee; --tag: #d7a0b8;
+  --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f; --gold: #e0c27a; --blue: #a9c7ee;
+  --ok-bg: #b4e7c71a; --bad-bg: #ff718f1f;
+  --glow: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), radial-gradient(700px 360px at 95% 0%, #a9c7ee12, transparent 60%);
+  --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r-s: 8px; --r-m: 12px; --r-l: 16px;
+  --primary-bg: var(--accent); --primary-fg: var(--on-accent);
+}
+[data-skin="flat"] {
+  --bg: #06080f; --bg-subtle: #0d0f14; --surface: #0d0f14; --surface-2: #161D2E; --row: #161D2E; --selection: #232A40;
+  --border: #313342; --border-subtle: #232A40; --border-strong: #313342;
+  --text: #F3F6F9; --secondary: #A3B5D6; --muted: #5C6170; --heading: #B5B2D0;
+  --accent: #7FB4CA; --accent-strong: #7FB4CA; --accent-soft: #A3B5D6; --on-accent: #06080f;
+  --focus: #7FB4CA; --link: #7FB4CA; --tag: #B99BF2;
+  --green: #B7CC85; --warning: #DEBA87; --red: #CB7C94; --gold: #E0C15A; --blue: #7FB4CA;
+  --ok-bg: #1a2e1a; --bad-bg: #2e1a1a;
+  --glow: none;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r-s: 4px; --r-m: 6px; --r-l: 8px;
+  --primary-bg: #E0C15A; --primary-fg: #1a1405;
+}
+body { background: var(--glow), var(--bg); }
+
+/* skin switch (top-right of every studio screen) */
+.skin-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 2px; background: var(--surface); font: 12px var(--mono); }
+.skin-switch button { border: 0; background: none; color: var(--secondary); padding: 4px 12px; border-radius: 999px; cursor: pointer; font: inherit; }
+.skin-switch button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.skin-switch small { opacity: .75; margin-left: 4px; font-weight: 400; }
+/*@end-skins*/
+/*@workspace*/
+/* Unified workspace: outline (left, always visible) · slide (center) · comments (right). Uses skin variables only. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 900px; width: 1440px; overflow: hidden; }
+body { color: var(--text); font: 14px/1.45 var(--sans); display: grid; grid-template-rows: 52px 1fr 30px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd { font: 11px var(--mono); }
+
+.top { display: flex; align-items: center; gap: 18px; padding: 0 20px; border-bottom: 1px solid var(--border-subtle); }
+.logo { font: 700 15px var(--mono); color: var(--accent); }
+.logo span { color: var(--text); }
+.deck { font: 600 15px var(--sans); }
+.deck small { font: 12px var(--mono); color: var(--secondary); margin-left: 8px; font-weight: 400; }
+.progress { width: 180px; height: 4px; border-radius: 4px; background: var(--border-subtle); overflow: hidden; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-soft)); }
+.top .grow { flex: 1; }
+.btn { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-s); padding: 6px 12px; font-size: 13px; }
+.btn.primary { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary-fg); font-weight: 700; }
+
+.ws { display: grid; grid-template-columns: 420px 1fr 300px; min-height: 0; }
+
+/* left: outline, always visible */
+.outline { border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; min-height: 0; background: var(--bg-subtle); }
+.o-head { padding: 16px 18px 10px; }
+.eyebrow { font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin: 0 0 4px; }
+.o-head p { margin: 0; font-size: 12.5px; color: var(--secondary); }
+.o-head p b { color: var(--text); font-weight: 500; }
+.rows { list-style: none; margin: 0; padding: 0 10px 10px; display: grid; gap: 6px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 26px 88px 1fr; gap: 0 10px; padding: 8px; border: 1px solid transparent; border-radius: var(--r-m); align-items: start; }
+.row:hover { background: var(--surface); }
+.row .n { font: 12px var(--mono); color: var(--accent); padding-top: 3px; }
+.row h3 { font: 600 13.5px/1.3 var(--sans); margin: 0; }
+.row .sub { display: flex; gap: 6px; align-items: center; margin-top: 4px; font: 11px var(--mono); color: var(--secondary); flex-wrap: wrap; }
+.tag { color: var(--tag); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; }
+.st { padding: 0 6px; border-radius: 4px; }
+.st.ok { color: var(--green); background: var(--ok-bg); }
+.st.w { color: var(--accent); background: var(--surface-2); }
+.st.over { color: var(--red); background: var(--bad-bg); }
+.st.p { color: var(--muted); border: 1px dashed var(--border); }
+.cm { color: var(--warning); }
+.row.sel { background: var(--surface-2); border-color: var(--accent); }
+.row .points { grid-column: 3; margin: 6px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--secondary); }
+.row .points li::before { content: "· "; color: var(--accent); }
+.row .edit { grid-column: 3; margin-top: 6px; border: 1px solid var(--accent); border-radius: var(--r-s); background: var(--bg); padding: 4px 8px; font: 12.5px var(--sans); color: var(--text); }
+.row .edit::after { content: "|"; color: var(--accent); margin-left: 1px; }
+.row .note { grid-column: 3; margin-top: 6px; font: 11.5px var(--mono); color: var(--gold); }
+.row .note::before { content: "nota › "; color: var(--muted); }
+.row .acts { grid-column: 1 / -1; display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font: 11.5px var(--mono); color: var(--secondary); }
+.row .acts kbd { color: var(--accent); }
+.gap { display: flex; justify-content: center; gap: 6px; margin: -2px 0; }
+.gap span { font: 11px var(--mono); padding: 1px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--secondary); }
+.o-foot { margin-top: auto; padding: 10px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--secondary); }
+.o-foot b { color: var(--accent); font-weight: 400; }
+
+/* thumbnails and slides (deck theme: Fair Test, independent of the skin) */
+.th { width: 88px; aspect-ratio: 16 / 9; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.th.pending { background: repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--bg) 6px 12px); }
+.th.writing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fair { background: #fff; color: #1b1b3a; display: flex; flex-direction: column; justify-content: center; padding: 8%; }
+.fair b { font: 900 8px/1.05 ui-rounded, "SF Pro Rounded", system-ui, sans-serif; letter-spacing: -.02em; }
+.fair i { display: block; width: 26px; height: 5px; border-radius: 4px; margin-bottom: 4px; }
+
+/* center */
+.center { display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+.tools { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+.seg { display: flex; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; }
+.seg button { border: 0; background: none; padding: 5px 11px; color: var(--secondary); font-size: 13px; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--accent); }
+.tools select { font: 12.5px var(--mono); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-s); padding: 5px 8px; }
+.tools .grow { flex: 1; }
+.stage { flex: 1; display: grid; place-items: center; padding: 18px 22px; min-height: 0; }
+.caption { display: flex; justify-content: space-between; padding: 8px 18px; border-top: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
+.caption b { color: var(--text); font-weight: 400; }
+
+/* right: comments & requests */
+.side { border-left: 1px solid var(--border-subtle); background: var(--bg-subtle); display: flex; flex-direction: column; min-height: 0; }
+.s-title { display: flex; justify-content: space-between; padding: 14px 14px 8px; font: 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--heading); }
+.s-title span:last-child { letter-spacing: 0; color: var(--secondary); text-transform: none; }
+.tabs { display: flex; gap: 14px; padding: 0 14px; border-bottom: 1px solid var(--border-subtle); font: 12px var(--mono); }
+.tabs span { padding: 6px 0; color: var(--secondary); white-space: nowrap; }
+.tabs { gap: 12px; }
+.tabs span.on { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.thread { list-style: none; margin: 0; padding: 12px 14px; display: grid; gap: 10px; overflow: hidden; }
+.c { border: 1px solid var(--border); border-radius: var(--r-m); padding: 9px 11px; background: var(--surface); font-size: 13px; }
+.c .who { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--secondary); margin-bottom: 4px; }
+.c .who b { color: var(--accent); font-weight: 600; }
+.c .on { font: 11px var(--mono); color: var(--tag); display: block; margin-bottom: 4px; }
+.c.agent { border-color: var(--border-subtle); background: var(--bg); }
+.c.agent .who b { color: var(--green); }
+.c.done { opacity: .6; }
+.c.done .who span::after { content: " · resuelto"; color: var(--green); }
+.compose { margin: auto 14px 12px; border: 1px solid var(--border); border-radius: var(--r-m); background: var(--bg); padding: 8px 10px; font-size: 13px; color: var(--muted); }
+.compose .row2 { display: flex; justify-content: space-between; margin-top: 8px; font: 11px var(--mono); color: var(--secondary); }
+.compose .row2 span.go { color: var(--accent); }
+
+.status { display: flex; align-items: center; gap: 18px; padding: 0 20px; border-top: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
+.status .ok { color: var(--green); }
+.status .req { color: var(--warning); }
+.status .right { margin-left: auto; display: flex; gap: 16px; }
+.status kbd { color: var(--text); }
+/*@end-workspace*/
+  /* the selected slide, large (deck theme: Fair Test) */
+  .slide { position: relative; width: 100%; max-width: 820px; aspect-ratio: 16 / 9; background: #fff; color: #1b1b3a; border-radius: 6px; padding: 5% 6%; box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif; display: grid; grid-template-columns: 1fr 34%; gap: 4%; align-items: center; }
+  .pill { display: inline-flex; gap: 6px; font: 700 11px ui-monospace, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #2f6bff; padding: 4px 10px; border-radius: 999px; }
+  .slide h2 { font: 900 34px/1.04 ui-rounded, "SF Pro Rounded", system-ui, sans-serif; letter-spacing: -.03em; margin: 14px 0 10px; }
+  .slide h2 em { font-style: normal; color: #2f6bff; }
+  .slide p { margin: 22px 0 0; font-size: 14px; color: #5b5f7a; }
+  .slide .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .slide .card { border: 2px solid #e8eaf3; border-radius: 12px; padding: 10px; font-size: 12.5px; }
+  .slide .card b { display: block; font: 700 13px ui-monospace, Menlo, monospace; color: #22c55e; margin-bottom: 2px; }
+  .slide svg { width: 100%; }
+  .slide .foot { position: absolute; left: 6%; right: 6%; bottom: 4%; display: flex; justify-content: space-between; font: 10px ui-monospace, Menlo, monospace; color: #5b5f7a; }
+  /* edit + comment overlays (studio chrome, skin colors) */
+  .editing { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; position: relative; }
+  .editing::after { content: "editando · Enter guarda · Esc cancela"; position: absolute; left: 0; bottom: -24px; font: 600 10.5px var(--mono); color: var(--on-accent); background: var(--accent); padding: 2px 8px; border-radius: 4px; white-space: nowrap; letter-spacing: 0; }
+  .pin { position: absolute; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; background: var(--accent); color: var(--on-accent); font: 700 11px/22px var(--mono); text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .pop { position: absolute; right: 2%; top: 58%; width: 250px; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--r-m); padding: 9px 10px; font: 12.5px var(--sans); color: var(--text); box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  .pop small { display: block; font: 10.5px var(--mono); color: var(--secondary); margin-bottom: 6px; }
+  .pop .f { border: 1px solid var(--border); border-radius: var(--r-s); padding: 5px 7px; background: var(--bg); }
+  .pop .r { display: flex; justify-content: flex-end; gap: 6px; margin-top: 7px; font: 10.5px var(--mono); }
+  .pop .r span { border: 1px solid var(--border); border-radius: var(--r-s); padding: 2px 7px; }
+  .pop .r span.go { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="logo">gentle<span>·decks</span></span>
+  <span class="deck">Por qué empezar con Python<small>decks/demo · fair-test</small></span>
+  <div class="progress" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso"><i style="width:62%"></i></div>
+  <span style="font:12px var(--mono);color:var(--secondary)">5 / 8 escritas</span>
+  <span class="grow"></span>
+  <button class="btn">✦ Rehacer con el agente</button>
+  <button class="btn primary">Present ▶</button>
+  <div class="skin-switch" role="group" aria-label="Estilo"><button data-skin="gentle" aria-pressed="true">Gentle</button><button data-skin="flat" aria-pressed="false">Flat</button></div>
+</header>
+
+<div class="ws">
+  <nav class="outline" aria-label="Esquema">
+    <div class="o-head">
+      <p class="eyebrow">Estructura</p>
+      <p>Para <b>Estudiantes sin experiencia</b> · <b>Confianza para empezar</b></p>
+    </div>
+    <ol class="rows">
+      <li class="row"><span class="n">01</span><div class="th fair"><i style="background:#2f6bff"></i><b>Por qué empezar con Python</b></div><div><h3>Por qué empezar con Python</h3><div class="sub"><span class="tag">cover</span><span class="st ok">lista</span></div></div></li>
+      <li class="row"><span class="n">02</span><div class="th fair"><i style="background:#ffb020"></i><b>La primera victoria</b></div><div><h3>La primera victoria llega rápido</h3><div class="sub"><span class="tag">grid-2</span><span class="st ok">lista</span></div></div></li>
+      <li class="row sel"><span class="n">03</span><div class="th fair"><i style="background:#2f6bff"></i><b>Hipótesis</b></div><div><h3>Leer el código se parece a leer una idea</h3><div class="sub"><span class="tag">term</span><span class="st over">no cabe</span><span class="cm">● 2</span></div></div>
+        <div class="acts"><span><kbd>e</kbd> editar</span><span><kbd>c</kbd> comentar</span><span><kbd>r</kbd> rehacer</span><span><kbd>l</kbd> layout</span></div></li>
+      <li class="row"><span class="n">04</span><div class="th fair"><i style="background:#22c55e"></i><b>Conceptos</b></div><div><h3>Aprendes conceptos que sirven en cualquier lenguaje</h3><div class="sub"><span class="tag">steps</span><span class="st ok">lista</span></div></div></li>
+      <li class="row"><span class="n">05</span><div class="th writing fair"><i style="background:#8b5cf6"></i><b>Biblioteca…</b></div><div><h3>La biblioteca estándar amplía tus posibilidades</h3><div class="sub"><span class="tag">card</span><span class="st w">escribiendo…</span></div></div></li>
+      <li class="row"><span class="n">06</span><div class="th pending"></div><div><h3>Puedes pasar de ejercicios a proyectos reales</h3><div class="sub"><span class="tag">grid-3</span><span class="st p">pendiente</span></div></div></li>
+      <li class="row"><span class="n">07</span><div class="th pending"></div><div><h3>La comunidad convierte los bloqueos en pasos</h3><div class="sub"><span class="st p">pendiente</span></div></div></li>
+    </ol>
+    <div class="o-foot"><span>8 diapositivas</span><b>+ añadir diapositiva</b></div>
+  </nav>
+
+  <main class="center" aria-label="Diapositiva 03">
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Vista"><button aria-pressed="false" title="Look &amp; feel">Estilo</button><button aria-pressed="true">Slide</button><button aria-pressed="false">Grid</button></div>
+      <div class="seg" role="group" aria-label="Modo"><button aria-pressed="false">Ver</button><button aria-pressed="false">Comentar</button><button aria-pressed="true">Editar</button></div>
+      <select aria-label="Cambiar layout"><option>layout: term</option></select>
+      <span class="grow"></span>
+      <span style="font:12px var(--mono);color:var(--secondary);white-space:nowrap">← →</span>
+    </div>
+    <div class="stage">
+      <div class="slide">
+        <div>
+          <span class="pill">03 · Hipótesis</span>
+          <h2 class="editing">Leer código es como <em>leer una idea</em></h2>
+          <p>Python usa palabras y estructuras sencillas: menos símbolos, más intención.</p>
+          <div class="cards">
+            <div class="card"><b>if edad &gt;= 18:</b>se lee casi en voz alta</div>
+            <div class="card"><b>for nombre in lista:</b>recorre sin índices</div>
+          </div>
+        </div>
+        <svg viewBox="0 0 300 260" role="img" aria-label="Diorama isométrico">
+          <polygon points="150,40 280,115 150,190 20,115" fill="#e9eeff"/>
+          <polygon points="20,115 150,190 150,210 20,135" fill="#c7d2fe"/>
+          <polygon points="280,115 150,190 150,210 280,135" fill="#a5b4fc"/>
+          <polygon points="150,75 230,120 150,165 70,120" fill="#ffb020"/>
+          <polygon points="140,95 190,123 160,141 110,113" fill="#1b1b3a"/>
+          <polygon points="110,113 140,95 140,58 110,76" fill="#2f6bff"/>
+          <circle cx="215" cy="105" r="12" fill="#8b5cf6"/><circle cx="215" cy="105" r="8" fill="#fff"/>
+        </svg>
+        <span class="pin" style="left:54%;top:30%">1</span>
+        <span class="pin" style="left:80%;top:22%">2</span>
+        <div class="pop" role="dialog" aria-label="Comentario 2">
+          <small>svg · diorama</small>
+          <div class="f">Que la pantalla muestre el código del ejemplo</div>
+          <div class="r"><span>Esc</span><span class="go">enviar ↵</span></div>
+        </div>
+        <div class="foot"><span>Por qué empezar con Python</span><span>03 / 08</span></div>
+      </div>
+    </div>
+    <div class="caption"><span><b>Editar</b>: clic en un texto y escribe · se guarda en el markdown</span><span class="st over" style="font:12px var(--mono);white-space:nowrap">1020 / 900 px</span></div>
+  </main>
+
+  <aside class="side" aria-label="Comentarios">
+    <div class="s-title"><span>Comentarios</span><span>03 · reads-like-an-idea</span></div>
+    <div class="tabs"><span class="on">Esta · 2</span><span>Todas · 4</span><span>Agente</span></div>
+    <ul class="thread">
+      <li class="c"><span class="on">h2 · "Leer el código se parece…"</span><div class="who"><b>Tú</b><span>hace 3 min</span></div>Título más corto, que entre en una línea.</li>
+      <li class="c agent"><div class="who"><b>Agente</b><span>hace 2 min</span></div>Lo cambié a "Leer código es como leer una idea".</li>
+      <li class="c"><span class="on">svg · diorama</span><div class="who"><b>Tú</b><span>ahora</span></div>Que la pantalla muestre el código del ejemplo.</li>
+      <li class="c agent"><div class="who"><b>Agente</b><span>automático</span></div>La diapositiva no cabe (1020 px de 900). Quito una tarjeta o la parto en dos.</li>
+    </ul>
+    <div class="compose">Comentar en la diapositiva 03…<div class="row2"><span>⌘↵ enviar al agente</span><span class="go">enviar</span></div></div>
+  </aside>
+</div>
+
+<footer class="status" aria-label="Estado">
+  <span class="ok">● agente escribiendo 05</span>
+  <span>8 diapositivas · 5 escritas</span>
+  <span class="req">3 peticiones abiertas</span>
+  <span class="right"><span><kbd>?</kbd> atajos</span><span><kbd>/</kbd> orden</span></span>
+</footer>
+<!--@switch-js--><script>
+// Skin toggle for studio artboards: gentle (brand) / flat (Gentle Shell terminal).
+document.querySelectorAll(".skin-switch button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.documentElement.dataset.skin = b.dataset.skin;
+    document.querySelectorAll(".skin-switch button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  });
+});
+</script><!--@end-switch-js-->
+</body>
+</html>
