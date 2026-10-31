@@ -264,7 +264,12 @@ test("api/state reports rev, themes, slide statuses, and open requests (S6)", as
     ],
   );
   assert.equal(empty.body.deck.exists, false);
-  assert.deepEqual(sortedThemes(empty.body.themes), [["studio", "deck"], ["gentleman-cute", "repo"]]);
+  assert.deepEqual(sortedThemes(empty.body.themes), [
+    ["studio", "deck"],
+    ["fair-test", "repo"],
+    ["fair-test-gentle", "repo"],
+    ["gentleman-cute", "repo"],
+  ]);
   assert.deepEqual(empty.body.requests.map((r) => r.id), ["open1"]);
 
   // The plan scaffold is the draft baseline: unchanged scaffold bodies are drafts.
@@ -491,6 +496,159 @@ test("studio requests and resolve CLI read and update requests.json (S9)", async
   assert.equal(fs.readFileSync(path.join(dir, "requests.json"), "utf8"), before);
 });
 
+// ---- Agent replies and the resolved feed (S8) ----
+
+test("api/state lists the 50 most recently resolved requests, newest first (S8)", async (t) => {
+  const resolved = Array.from({ length: 60 }, (_, i) => ({
+    id: `done${String(i).padStart(2, "0")}`,
+    kind: "comment",
+    slideId: "second",
+    text: `Resolved ${i}`,
+    status: "resolved",
+    createdAt: "2024-01-01T00:00:00.000Z",
+    resolvedAt: new Date(Date.UTC(2024, 0, 2, 0, i)).toISOString(),
+  }));
+  const open = [
+    { id: "open1", kind: "comment", slideId: "second", text: "Open", status: "open", createdAt: "2024-01-01T00:00:00.000Z", resolvedAt: null },
+    { id: "open2", kind: "redo", slideId: "third", text: "Open too", status: "open", createdAt: "2024-01-01T00:00:00.000Z", resolvedAt: null },
+  ];
+  // Open requests sit first and last in the file: the split is by status, not by position.
+  const dir = makeDeck({ requests: { version: 1, requests: [open[0], ...resolved, open[1]] } });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const state = (await call(studio, "api/state")).body;
+  assert.deepEqual(state.requests.map((r) => r.id), ["open1", "open2"]);
+  const expected = resolved.slice().reverse().slice(0, 50).map((r) => r.id);
+  assert.equal(expected.length, 50);
+  assert.deepEqual(state.resolved.map((r) => r.id), expected);
+  assert.deepEqual(state.resolved[0], resolved[59]);
+  assert.ok(state.resolved.every((r) => r.status === "resolved"));
+});
+
+test("studio reply stores an agent reply without resolving (S8)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+  const created = await send(studio, "POST", "api/requests", { kind: "comment", slideId: "second", text: "Tighten" });
+  const { id } = created.body.request;
+
+  assert.deepEqual(run("studio", "reply", dir, id, "Tightened the second slide"), {
+    code: 0,
+    stdout: `replied ${id}\n`,
+    stderr: "",
+  });
+  const stored = JSON.parse(fs.readFileSync(file, "utf8")).requests.find((r) => r.id === id);
+  assert.equal(stored.reply, "Tightened the second slide");
+  assert.match(stored.repliedAt, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+  assert.equal(stored.status, "open");
+  assert.equal(stored.resolvedAt, null);
+
+  const state = (await call(studio, "api/state")).body;
+  assert.deepEqual(state.requests.map((r) => [r.id, r.reply]), [[id, "Tightened the second slide"]]);
+  assert.deepEqual(state.resolved, []);
+
+  // A 2000-character reply is the accepted boundary; empty, blank, and longer ones fail untouched.
+  assert.equal(run("studio", "reply", dir, id, "y".repeat(2000)).code, 0);
+  assert.equal(JSON.parse(fs.readFileSync(file, "utf8")).requests[0].reply.length, 2000);
+  const before = fs.readFileSync(file);
+  for (const text of ["", "   ", "z".repeat(2001)]) {
+    assert.deepEqual(run("studio", "reply", dir, id, text), { code: 1, stdout: "", stderr: "invalid reply\n" });
+    assert.deepEqual(fs.readFileSync(file), before);
+  }
+  assert.deepEqual(run("studio", "reply", dir, "nope", "text"), { code: 1, stdout: "", stderr: "unknown request nope\n" });
+  assert.deepEqual(fs.readFileSync(file), before);
+});
+
+test("studio resolve --reply resolves every id with the reply (S8)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+  const a = (await send(studio, "POST", "api/requests", { kind: "comment", slideId: "second", text: "One" })).body.request.id;
+  const b = (await send(studio, "POST", "api/requests", { kind: "redo", slideId: "third", text: "Two" })).body.request.id;
+  const c = (await send(studio, "POST", "api/requests", { kind: "comment", slideId: "third", text: "Three" })).body.request.id;
+
+  assert.deepEqual(run("studio", "resolve", dir, a, b, "--reply", "Tighter and warmer"), {
+    code: 0,
+    stdout: `resolved ${a}\nresolved ${b}\n`,
+    stderr: "",
+  });
+  const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+  for (const request of doc.requests.filter((r) => r.id === a || r.id === b)) {
+    assert.equal(request.status, "resolved");
+    assert.equal(request.reply, "Tighter and warmer");
+    assert.match(request.repliedAt, /^\d{4}-\d\d-\d\dT/);
+    assert.match(request.resolvedAt, /^\d{4}-\d\d-\d\dT/);
+  }
+  const untouched = doc.requests.find((r) => r.id === c);
+  assert.equal(untouched.status, "open");
+  assert.equal(untouched.reply, undefined);
+
+  const state = (await call(studio, "api/state")).body;
+  assert.deepEqual(state.requests.map((r) => r.id), [c]);
+  assert.deepEqual(state.resolved.map((r) => r.id).sort(), [a, b].sort());
+  assert.ok(state.resolved.every((r) => r.reply === "Tighter and warmer"));
+
+  // An unknown id cancels the whole command; an invalid reply fails before anything is written.
+  const before = fs.readFileSync(file);
+  assert.deepEqual(run("studio", "resolve", dir, c, "nope", "--reply", "Nope"), {
+    code: 1,
+    stdout: "",
+    stderr: "unknown request nope\n",
+  });
+  assert.deepEqual(fs.readFileSync(file), before);
+  for (const text of ["", "w".repeat(2001)]) {
+    assert.deepEqual(run("studio", "resolve", dir, c, "--reply", text), {
+      code: 1,
+      stdout: "",
+      stderr: "invalid reply\n",
+    });
+    assert.deepEqual(fs.readFileSync(file), before);
+  }
+  assert.equal(JSON.parse(fs.readFileSync(file, "utf8")).requests.find((r) => r.id === c).status, "open");
+});
+
+test("a reply write streams an SSE change event (S8)", async (t) => {
+  const dir = makeDeck({
+    requests: {
+      version: 1,
+      requests: [
+        { id: "open1", kind: "comment", slideId: "second", text: "Open", status: "open", createdAt: "2024-01-01T00:00:00.000Z", resolvedAt: null },
+      ],
+    },
+  });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await fetch(studio.base + "api/events");
+  const reader = res.body.getReader();
+  t.after(() => reader.cancel().catch(() => {}));
+  setTimeout(() => run("studio", "reply", dir, "open1", "Answered by the agent"), 150);
+
+  let text = "";
+  const deadline = Date.now() + 6000;
+  while (!text.includes("event: change") && Date.now() < deadline) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`SSE timeout, got: ${JSON.stringify(text.slice(-200))}`)),
+        Math.max(1, deadline - Date.now()),
+      );
+    });
+    const chunk = await Promise.race([reader.read(), timeout]);
+    clearTimeout(timer);
+    if (chunk.done) break;
+    text += new TextDecoder().decode(chunk.value, { stream: true });
+  }
+  assert.match(text, /event: change/);
+  assert.ok(
+    JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0].reply === "Answered by the agent",
+    "the reply CLI must write requests.json",
+  );
+  assert.equal((await call(studio, "api/state")).body.requests[0].reply, "Answered by the agent");
+});
+
 test("PUT api/slides/<id>/text edits one slide only (S10)", async (t) => {
   const deck = `---
 title: Studio deck
@@ -690,12 +848,21 @@ test("theme check accepts a CSS path (S4)", () => {
 });
 
 test("studio commands without arguments print usage and exit 2 (S14)", () => {
-  for (const args of [["studio"], ["studio", "requests"], ["studio", "resolve", "."]]) {
+  for (const args of [
+    ["studio"],
+    ["studio", "requests"],
+    ["studio", "resolve", "."],
+    ["studio", "reply"],
+    ["studio", "reply", "."],
+    ["studio", "resolve", ".", "id", "--reply"],
+  ]) {
     const r = run(...args);
     assert.equal(r.code, 2, args.join(" "));
     assert.equal(r.stdout, "");
     assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\)\n/);
     assert.match(r.stderr, /decks studio <deck-dir> \[--port N\]/);
+    assert.match(r.stderr, /decks studio reply <deck-dir> <id> <text>/);
+    assert.match(r.stderr, /decks studio resolve <deck-dir> <id\.\.\.> \[--reply <text>\]/);
   }
 });
 

@@ -15,6 +15,7 @@ import {
   readDeck,
   readPlanDocument,
   readRequests,
+  resolvedRequests,
   slideStates,
   studioPaths,
   validateRequest,
@@ -196,6 +197,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       themes: listThemes(paths.dir),
       deck: { exists: Boolean(deck), slides: slideStates(plan.plan, deck) },
       requests: openRequests(paths),
+      resolved: resolvedRequests(paths),
     });
   }
 

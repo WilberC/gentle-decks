@@ -6,7 +6,7 @@ import { renderDeck } from "../src/render.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
 import { missingSelectors, findTheme, THEME_NAME } from "../src/theme.js";
-import { openRequests, resolveRequests, studioPaths } from "../src/studio/state.js";
+import { openRequests, replyProblem, replyToRequest, resolveRequests, studioPaths } from "../src/studio/state.js";
 import { startStudio } from "../src/studio/server.js";
 
 const USAGE = [
@@ -16,7 +16,8 @@ const USAGE = [
   "       decks theme check <name|path.css>",
   "       decks studio <deck-dir> [--port N]",
   "       decks studio requests <deck-dir>",
-  "       decks studio resolve <deck-dir> <id...>",
+  "       decks studio reply <deck-dir> <id> <text>",
+  "       decks studio resolve <deck-dir> <id...> [--reply <text>]",
 ].join("\n");
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -135,7 +136,7 @@ function main() {
   if (args[0] !== "studio") return buildCommand();
 
   const sub = args[1];
-  if (sub !== "requests" && sub !== "resolve") return studioServerCommand(sub);
+  if (sub !== "requests" && sub !== "resolve" && sub !== "reply") return studioServerCommand(sub);
   const dir = args[2];
   if (!dir || dir.startsWith("-")) usage();
   try {
@@ -143,9 +144,27 @@ function main() {
       console.log(JSON.stringify(openRequests(studioPaths(dir)), null, 2));
       return;
     }
-    const ids = args.slice(3);
-    if (!ids.length) usage();
-    const { unknown } = resolveRequests(studioPaths(dir), ids);
+    if (sub === "reply") {
+      // `decks studio reply <deck-dir> <id> <text>`: unquoted words after the id join into one reply.
+      const id = args[3];
+      const text = args.slice(4).join(" ");
+      if (!id || id.startsWith("-") || args.length < 5) usage();
+      rejectReply(text);
+      const { unknown } = replyToRequest(studioPaths(dir), id, text);
+      if (unknown) {
+        console.error(`unknown request ${unknown}`);
+        process.exit(1);
+      }
+      console.log(`replied ${id}`);
+      return;
+    }
+    const rest = args.slice(3);
+    const replyAt = rest.indexOf("--reply");
+    const reply = replyAt === -1 ? undefined : rest[replyAt + 1];
+    const ids = replyAt === -1 ? rest : rest.filter((_, index) => index !== replyAt && index !== replyAt + 1);
+    if (!ids.length || (replyAt !== -1 && reply === undefined)) usage();
+    if (reply !== undefined) rejectReply(reply);
+    const { unknown } = resolveRequests(studioPaths(dir), ids, { reply });
     if (unknown) {
       console.error(`unknown request ${unknown}`);
       process.exit(1);
@@ -155,6 +174,14 @@ function main() {
     console.error(`studio: ${err.message}`);
     process.exit(1);
   }
+}
+
+// S8: an empty or oversized reply fails the command before requests.json is touched.
+function rejectReply(text) {
+  const problem = replyProblem(text);
+  if (!problem) return;
+  console.error(problem);
+  process.exit(1);
 }
 
 function studioServerCommand(dir) {
