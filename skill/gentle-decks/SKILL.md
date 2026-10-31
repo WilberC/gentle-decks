@@ -54,8 +54,9 @@ Read its `FORMAT.md` before writing the first slide of a session.
    answers as `audience`/`goal`, one entry per slide with a stable kebab-case
    `id` named after its idea, `title`, `points`, and the planned `layout`
    (`card`, `steps`, `bars`, …). Run `plan check` until it prints `ok`.
-3. **Look and feel.** Propose two or three themes for this topic and audience
-   next to the existing ones: write each as `decks/<slug>/themes/<name>.css`
+3. **Look and feel.** Offer the bundled themes (`fair-test` for bright,
+   classroom-friendly decks; `fair-test-gentle` and `gentleman-cute` for Gentle
+   decks) and, when none fits, propose one or two more for this topic and audience: write each as `decks/<slug>/themes/<name>.css`
    following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
    until it prints `ok`. Keep the existing themes as options.
 4. **Open the studio.** Start it in the background and watch its output:
@@ -63,7 +64,9 @@ Read its `FORMAT.md` before writing the first slide of a session.
    `studio: http://127.0.0.1:<port>/<token>/`, then one `request <id> <kind> <slide>`
    line per user action. Use a monitor (for example the `monitor` tool on that
    command) so each line reaches you as it happens. Give the user the URL.
-   In the **Plan** stage the user edits the outline (text, add, merge, move,
+   The studio is one workspace: the outline stays on the left, the center
+   switches between Estilo, Slide and Grid, and comments are threads on the right.
+   Before generation the user edits the outline (text, add, merge, move,
    delete, comment) and picks a theme; the studio writes `plan.json` directly.
    Without the studio (no browser), show the outline as a numbered list in chat
    and apply the user's changes to `plan.json` yourself.
@@ -86,6 +89,12 @@ The studio queues user actions in `decks/<slug>/requests.json`.
 JSON; `studio resolve decks/<slug> <id...>` closes them. Read the open list
 after every `request …` line and whenever you resume.
 
+The user sees comments as a thread per slide. Answer every `comment`, `redo`,
+`layout`, and `add-slide` request in that thread: `studio reply decks/<slug> <id> "<text>"`
+while you work (for example a question or what you plan), and
+`studio resolve decks/<slug> <id> --reply "<what you changed>"` when it is saved.
+Keep replies to one or two sentences in the user's language.
+
 | Kind | What to do |
 | --- | --- |
 | `generate` | Step 5. |
@@ -97,7 +106,7 @@ after every `request …` line and whenever you resume.
 
 Text edits made in the studio's Edit mode are already written to the deck; do
 not undo them. Resolve each request only after the change is saved; leave a
-request open and tell the user why when you cannot apply it.
+request open and reply in its thread with why when you cannot apply it.
 
 ## Approach questionnaire
 

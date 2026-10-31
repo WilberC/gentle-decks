@@ -137,6 +137,7 @@ single-line; points must not start with `---` or `:::`.
 
 `themes/CONTRACT.md` lists the selectors every theme must style.
 `decks theme check <name|path.css>` prints `ok: <name>` or the missing selectors.
+Bundled themes: `gentleman-cute`, `fair-test`, `fair-test-gentle`.
 A deck's `theme:` is looked up in `<deck dir>/themes/<name>.css` first, then in
 the repository `themes/`; a missing theme fails the build with
 `build failed: theme not found: <name>`.

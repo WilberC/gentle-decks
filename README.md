@@ -31,31 +31,42 @@ makes themes interchangeable.
 ## Studio
 
 ```bash
-node bin/decks.js studio decks/<slug>          # needs decks/<slug>/plan.json
-node bin/decks.js studio requests decks/<slug> # open requests as JSON
-node bin/decks.js studio resolve decks/<slug> <id...>
+node bin/decks.js studio decks/<slug>                  # needs decks/<slug>/plan.json
+node bin/decks.js studio requests decks/<slug>         # open requests as JSON
+node bin/decks.js studio reply decks/<slug> <id> <text> # answer in the comment thread
+node bin/decks.js studio resolve decks/<slug> <id...> [--reply <text>]
 ```
 
-A local web app (127.0.0.1, secret token in the URL) with three stages:
+A local web app (127.0.0.1, secret token in the URL) with one workspace for the
+whole flow:
 
-- **Plan** — edit the outline (text, add, merge, move, delete, comment) and
-  pick the look and feel from theme previews rendered with your own slides.
-- **Grid** — every slide as it is written; pending slides shimmer until the
-  agent saves them.
-- **Editor** — thumbnail rail, large view, inline text editing, anchored
-  comments, layout switch, "Redo with agent", add slide, overflow badges,
-  and a Present link.
+- **Outline** (left, always visible) — every slide with its thumbnail, status
+  (`pendiente`, `escribiendo…`, `lista`, `no cabe`) and open comments. Edit the
+  text, add, merge, move, delete, or comment a slide in place; keyboard
+  shortcuts on the focused row (`e`, `↑↓`, `Alt+↑↓`, `m`, `c`, `a`, `Delete`).
+- **Center** — three views: **Estilo** (theme previews rendered with your own
+  outline, plus Generate), **Slide** (the selected slide with Ver / Comentar /
+  Editar modes, layout switch and overflow warning) and **Grid** (all slides,
+  filling in live as the agent writes them).
+- **Comments** (right) — one thread per slide; the agent answers in the same
+  thread with `studio reply` or `studio resolve --reply`.
+
+Two skins: **Gentle** (default, the Gentle brand palette) and **Flat** (the
+Gentle Shell terminal palette). Switch in the header; the choice is remembered,
+and `?skin=flat` forces it. Append `#style`, `#slide`, or `#grid` to the URL
+to open a view (`#plan` and `#editor` still work).
 
 Try it with `npm run studio:demo` (an eight-slide Python plan in
-`decks/demo/`); write `decks/demo/demo.md` with `plan scaffold` to see the grid
-and editor. Append `#plan`, `#grid`, or `#editor` to the URL to open a stage.
-`npm run smoke:ui` drives the whole UI in a headless Edge/Chrome/Chromium
+`decks/demo/`); write `decks/demo/demo.md` with `plan scaffold` to see the
+slides. `npm run smoke:ui` drives the whole UI in a headless Edge/Chrome/Chromium
 (`BROWSER=<path>` to choose) and checks the files it writes.
 
 The studio edits `plan.json` and deck text directly; everything that needs
 writing (generate, comments, redo, layout, new slides, overflow) is queued in
 `requests.json` and printed as `request <id> <kind> <slide>` for the agent.
-A deck may ship its own themes in `decks/<slug>/themes/`.
+A deck may ship its own themes in `decks/<slug>/themes/`. Bundled deck themes:
+`gentleman-cute`, `fair-test` (bright, white, rainbow method stages) and
+`fair-test-gentle` (the same structure in Gentle colors).
 
 ## Agent workflow
 
