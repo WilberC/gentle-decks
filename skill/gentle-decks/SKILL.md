@@ -30,6 +30,7 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
 | --- | --- |
 | Renderer CLI | `node <decks-repo>/bin/decks.js` |
 | Format contract | `<decks-repo>/FORMAT.md` |
+| Outline | `decks/<slug>/plan.json` in the current project |
 | Deck source | `decks/<slug>/<slug>.md` in the current project |
 | Canvas preview | `design/<slug>/` (generated with `--design`) |
 | Presentation file | `decks/<slug>/<slug>.html` (generated with `-o`) |
@@ -46,16 +47,21 @@ Read its `FORMAT.md` before writing the first slide of a session.
    Language and source material (files, notes, repository) come from the
    request or the conversation; ask about them only when they are missing and
    matter for the content.
-2. **Outline ("Crear esquema").** With the answers, propose a numbered outline: one line per slide with its title,
-   its one idea, and the component you plan to use (`card`, `steps`, `bars`, …).
-   Wait for the user to approve or edit it. This is the Gamma "outline" step;
-   skip it only when the user says to go straight to the deck.
-3. **Write.** Choose a kebab-case slug and write `decks/<slug>/<slug>.md` with
-   frontmatter (`title`, `brief`, `theme`, `brand`, `lang`). The first slide is
-   the cover (`class: cover`).
+2. **Outline ("Crear esquema").** Choose a kebab-case slug and write
+   `decks/<slug>/plan.json` (see `FORMAT.md`, "Plan file"): the questionnaire
+   answers as `audience`/`goal`, one entry per slide with a stable kebab-case
+   `id` named after its idea, `title`, `points`, and the planned `layout`
+   (`card`, `steps`, `bars`, …). Run `plan check` until it prints `ok`. Show the
+   outline as a numbered list and wait for approval. The user may edit text,
+   add, merge, move, or comment slides: apply each change to `plan.json`,
+   keeping the ids of slides that survive, and show it again. Skip approval
+   only when the user says to go straight to the deck.
+3. **Write.** `node <decks-repo>/bin/decks.js plan scaffold decks/<slug>/plan.json -o decks/<slug>/<slug>.md`
+   gives the skeleton; then write each slide's real content with the planned
+   component, honoring the slide's `notes`. Never change an `id:` line.
 4. **Build for the canvas.**
    `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md --design design/<slug>`
-   writes `NN-slide.html` per slide plus `design.json`. On `build failed`, fix
+   writes `slides/<id>.html` per slide plus `design.json`. On `build failed`, fix
    the reported slide and rebuild.
 5. **Preview.** Call the `gentle_design` tool with `action: "open"` and the slug,
    and report the URL. Call it again after every rebuild to refresh the tab.
@@ -89,19 +95,20 @@ never generic labels such as "Beginners" without saying beginners at what.
 ## Canvas comments
 
 Comments live in `design/<slug>/comments.json`. Each comment's `file` is a slide
-artboard: `NN-slide.html` is slide `NN` of the markdown, counting the cover as 01
-(slides are separated by top-level `---` after the frontmatter).
+artboard: `slides/<id>.html` is the slide whose `id:` directive is `<id>`
+(`slide-N` when the slide has none).
 
 1. List open comments with the `gentle_design_comments` tool (`action: "list"`, `slug`).
-2. For each comment: find slide `NN` in the markdown, locate the element with
+2. For each comment: find the slide with that id in the markdown, locate the element with
    `excerpt` (the text the user clicked) and `selector`, and edit only that slide.
    Look at `screenshot` first when present.
 3. Rebuild with `--design`, refresh the canvas, then resolve the applied ids with
    `gentle_design_comments` (`action: "resolve"`, `slug`, `ids`). Leave comments you
    did not apply open and say why.
 
-Adding or removing a slide renumbers the ones after it. Apply comments that
-reference later slides before inserting or deleting slides, or recompute their numbers.
+Moving, adding, or removing slides never re-targets a comment, because file
+names follow the id. Deleting a slide removes its artboard: resolve or report
+its open comments first.
 
 ## Output Contract
 

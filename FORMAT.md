@@ -36,6 +36,8 @@ line. Unknown keys are ignored.
 | `kicker: TEXT` | Small uppercase label at the top of the slide. |
 | `class: cover` (space-separated list) | Extra classes on the `<section>`. `cover` also adds falling petals. |
 | `lead: TEXT` | Intro paragraph under the title (`.lead`). |
+| `id: TEXT` | Stable slide id: lowercase letters, digits, hyphens, starting with a letter. Defaults to `slide-N`. Invalid or duplicate ids fail the build with the slide number. Keep it when moving slides: design artboards and comments follow the id. |
+| `layout: TEXT` | Planned component (from `plan.json`); a hint for the writer, not rendered. |
 
 ## Markdown mapping
 
@@ -100,17 +102,53 @@ class:
 > Delegar es una decisión, no un reflejo.
 ```
 
+## Plan file (`plan.json`)
+
+The outline the studio and the agent share before any slide is written.
+
+```json
+{
+  "version": 1,
+  "title": "Por qué empezar con Python",
+  "topic": "Python para principiantes",
+  "audience": "Estudiantes sin experiencia",
+  "goal": "Confianza para dar sus primeros pasos",
+  "lang": "es",
+  "theme": "gentleman-cute",
+  "slides": [
+    { "id": "cover", "title": "Por qué empezar con Python", "points": ["Una primera lengua para pensar con código"] },
+    { "id": "first-win", "title": "La primera victoria llega rápido", "points": ["Sintaxis clara"], "notes": "Comment for the writer", "layout": "grid-2" }
+  ]
+}
+```
+
+Required: `title`, a non-empty `slides`, and each slide's `id` (same rules as
+the `id:` directive, unique) and `title`. Titles, points, and metadata are
+single-line; points must not start with `---` or `:::`.
+
+- `decks plan check <plan.json>` prints `ok: <N> slides`, or one
+  `plan.json: <path>: <problem>` line per problem and exits 1.
+- `decks plan scaffold <plan.json> -o <deck.md>` writes a buildable deck: the
+  frontmatter carries title, goal (as `brief`), theme, and lang; each slide
+  gets `id:`, an optional `layout:`, its title as `#` (cover) or `##`, and its
+  points as bullets. It refuses to overwrite an existing file.
+
+## Themes
+
+`themes/CONTRACT.md` lists the selectors every theme must style.
+`decks theme check <name>` prints `ok: <name>` or the missing selectors.
+
 ## Renderer contract
 
 - `node bin/decks.js <deck.md> -o <out.html>` writes the HTML file and prints
   `<N> slides -> <absolute path>`.
-- `node bin/decks.js <deck.md> --design <dir>` writes `NN-slide.html` per slide
-  (static, no script, 1600×900, `data-slide="N"` on the section) plus
-  `design.json` for the gentle-design canvas. Slide `NN` is the NN-th slide of
-  the markdown, cover included. Stale `NN-slide.html` files are removed; other
-  files such as `comments.json` are kept.
-- Exactly one of `-o` or `--design` is required; otherwise the CLI prints
-  `usage: decks <deck.md> (-o <out.html> | --design <dir>)` and exits 2.
+- `node bin/decks.js <deck.md> --design <dir>` writes `slides/<id>.html` per
+  slide (static, no script, 1600×900, `data-slide="N"` and `data-slide-id` on
+  the section) plus `design.json` for the canvas, in deck order with titles
+  `NN · <title>`. Moving a slide keeps its file name. Stale `slides/*.html`
+  files are removed; other files such as `comments.json` are kept.
+- Exactly one of `-o` or `--design` is required; otherwise the CLI prints the
+  usage (all commands) and exits 2.
 - Same input → byte-identical output (deterministic; no timestamps).
 - Unknown container names fail the build with the slide number (exit 1,
   nothing written), so a typo in the markdown never produces a silently

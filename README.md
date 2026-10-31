@@ -15,13 +15,18 @@ shows the result).
 npm install
 node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html
 node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks
-npm run check           # structural checks, determinism, failure modes, design mode
+node bin/decks.js plan check plan.json
+node bin/decks.js plan scaffold plan.json -o decks/<slug>/<slug>.md
+node bin/decks.js theme check gentleman-cute
+npm run check           # structural checks + node:test suites
 ```
 
 `-o` writes the navigable presentation. `--design <dir>` writes one static
-artboard per slide (`NN-slide.html`, 1600×900) plus `design.json`, so the
-gentle-design canvas previews every slide and canvas comments name the slide
-they belong to. Rebuilding removes stale slide files and keeps `comments.json`.
+artboard per slide (`slides/<id>.html`, 1600×900) plus `design.json`, so the
+gentle-design canvas previews every slide and canvas comments follow the slide
+id even when slides move. Rebuilding removes stale slide files and keeps
+`comments.json`. `plan.json` holds the editable outline; `themes/CONTRACT.md`
+makes themes interchangeable.
 
 ## Agent workflow
 
@@ -51,9 +56,11 @@ produces a silently broken deck.
 | `src/parse.js` | Frontmatter, slide splitting, container tree |
 | `src/render.js` | Markdown and containers → slide HTML |
 | `src/design.js` | Per-slide canvas artboards and `design.json` |
+| `src/plan.js` | `plan.json` validation and deck scaffolding |
+| `src/theme.js` | Theme contract check |
 | `src/deck-nav.js` | Inlined navigation engine (keyboard, swipe, print) |
 | `themes/` | Deck themes (one CSS file each) |
 | `decks/sample/` | Sample deck used as the format fixture |
-| `checks/` | Structural verification and design-mode tests |
+| `checks/` | Structural verification and `node:test` suites |
 | `skill/gentle-decks/` | Agent skill (not installed yet) |
 | `odd/tasks/` | Feature specs and task log |
