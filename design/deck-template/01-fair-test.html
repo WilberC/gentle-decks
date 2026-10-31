@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1600">
+<title>Deck template · Fair Test (fiel)</title>
+<style>
+  /* Fair Test, after Gamma's description: toy-bright, white ground, isometric dioramas,
+     one rainbow color + labelled pill per stage, heavy rounded sans, measurements in mono. */
+  :root {
+    --ground: #ffffff; --ink: #1b1b3a; --soft: #5b5f7a; --line: #e8eaf3;
+    --s1: #ff5a5f; --s2: #ffb020; --s3: #22c55e; --s4: #2f6bff; --s5: #8b5cf6;
+    --round: ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", system-ui, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1600px; height: 900px; overflow: hidden; background: var(--ground); color: var(--ink); font-family: var(--round); }
+  .slide { width: 1600px; height: 900px; padding: 90px 110px; display: grid; grid-template-columns: 1fr 640px; gap: 60px; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 10px; font: 700 18px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--s4); padding: 8px 18px; border-radius: 999px; }
+  .pill b { background: #ffffff33; border-radius: 999px; padding: 0 9px; }
+  h1 { font: 900 84px/1.02 var(--round); letter-spacing: -.03em; margin: 28px 0 20px; }
+  h1 em { font-style: normal; color: var(--s4); }
+  .lead { font: 500 26px/1.45 var(--round); color: var(--soft); margin: 0 0 40px; max-width: 720px; }
+  .stages { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stages span { font: 700 15px var(--mono); padding: 7px 14px; border-radius: 999px; border: 2px solid currentColor; }
+  .stages span.on { color: #fff !important; }
+  .measure { display: flex; gap: 28px; margin-top: 44px; }
+  .measure div { border-left: 4px solid var(--s4); padding-left: 16px; }
+  .measure b { display: block; font: 700 40px var(--mono); }
+  .measure small { font: 500 17px var(--round); color: var(--soft); }
+  svg { width: 640px; height: 560px; }
+  .foot { position: absolute; left: 110px; right: 110px; bottom: 40px; display: flex; justify-content: space-between; font: 15px var(--mono); color: var(--soft); }
+</style>
+</head>
+<body>
+<section class="slide" aria-label="Diapositiva 3 · Hipótesis">
+  <div>
+    <span class="pill"><b>03</b> Hipótesis</span>
+    <h1>Si escribes 10 líneas al día, <em>en 2 semanas</em> lees código ajeno.</h1>
+    <p class="lead">Una sola variable cambia: los minutos de práctica. Todo lo demás se mantiene igual para que la prueba sea justa.</p>
+    <div class="stages" aria-label="Método">
+      <span style="color:var(--s1)">Pregunta</span>
+      <span style="color:var(--s2)">Investigación</span>
+      <span class="on" style="color:var(--s4);background:var(--s4);border-color:var(--s4)">Hipótesis</span>
+      <span style="color:var(--s3)">Experimento</span>
+      <span style="color:var(--s5)">Conclusión</span>
+    </div>
+    <div class="measure">
+      <div><b>10 min</b><small>práctica diaria</small></div>
+      <div style="border-color:var(--s2)"><b>14 días</b><small>duración</small></div>
+      <div style="border-color:var(--s3)"><b>n = 24</b><small>estudiantes</small></div>
+    </div>
+  </div>
+
+  <svg viewBox="0 0 640 560" role="img" aria-label="Diorama isométrico: escritorio con portátil, taza y cronómetro">
+    <defs>
+      <linearGradient id="top" x1="0" x2="1"><stop offset="0" stop-color="#eef2ff"/><stop offset="1" stop-color="#dfe6ff"/></linearGradient>
+    </defs>
+    <!-- base platform -->
+    <polygon points="320,120 600,280 320,440 40,280" fill="url(#top)"/>
+    <polygon points="40,280 320,440 320,480 40,320" fill="#c7d2fe"/>
+    <polygon points="600,280 320,440 320,480 600,320" fill="#a5b4fc"/>
+    <!-- desk -->
+    <polygon points="320,190 500,290 320,390 140,290" fill="#ffb020"/>
+    <polygon points="140,290 320,390 320,410 140,310" fill="#e09412"/>
+    <polygon points="500,290 320,390 320,410 500,310" fill="#c47f0c"/>
+    <!-- laptop base -->
+    <polygon points="300,240 400,296 330,336 230,280" fill="#1b1b3a"/>
+    <!-- laptop screen -->
+    <polygon points="230,280 300,240 300,160 230,200" fill="#2f6bff"/>
+    <polygon points="238,276 294,244 294,170 238,202" fill="#0f172a"/>
+    <g font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#22c55e">
+      <text x="244" y="214" transform="skewY(-30) translate(0,140)">print(</text>
+      <text x="244" y="226" transform="skewY(-30) translate(0,140)">"Hola")</text>
+    </g>
+    <!-- mug -->
+    <ellipse cx="430" cy="262" rx="18" ry="9" fill="#ff5a5f"/>
+    <rect x="412" y="232" width="36" height="30" fill="#ff5a5f"/>
+    <ellipse cx="430" cy="232" rx="18" ry="9" fill="#ff8a8e"/>
+    <!-- stopwatch -->
+    <circle cx="180" cy="250" r="26" fill="#8b5cf6"/>
+    <circle cx="180" cy="250" r="19" fill="#fff"/>
+    <line x1="180" y1="250" x2="180" y2="236" stroke="#1b1b3a" stroke-width="3" stroke-linecap="round"/>
+    <line x1="180" y1="250" x2="190" y2="254" stroke="#1b1b3a" stroke-width="3" stroke-linecap="round"/>
+    <rect x="174" y="218" width="12" height="8" rx="2" fill="#8b5cf6"/>
+    <!-- label flags -->
+    <g font-family="ui-monospace, Menlo, monospace" font-size="14" font-weight="700">
+      <rect x="470" y="150" width="120" height="30" rx="15" fill="#2f6bff"/><text x="486" y="170" fill="#fff">variable</text>
+      <line x1="470" y1="165" x2="300" y2="200" stroke="#2f6bff" stroke-width="2" stroke-dasharray="4 4"/>
+      <rect x="40" y="170" width="110" height="30" rx="15" fill="#8b5cf6"/><text x="56" y="190" fill="#fff">10 min</text>
+    </g>
+  </svg>
+</section>
+<footer class="foot"><span>Por qué empezar con Python</span><span>03 / 08</span></footer>
+</body>
+</html>

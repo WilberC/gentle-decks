@@ -1,0 +1,9 @@
+{
+  "title": "Deck template — after Gamma Fair Test",
+  "brief": "Example deck template following Gamma's Fair Test: white ground, isometric dioramas, one rainbow color and labelled pill per method stage, heavy rounded headings, mono measurements. Shown on a content slide (hypothesis).",
+  "feature": "odd/tasks/studio-design.md",
+  "artboards": [
+    { "file": "01-fair-test.html", "title": "Fair Test · faithful", "tradeoff": "Closest to the Gamma template (bright, white, rounded); friendly for classes and science topics, but does not read as Gentle", "width": 1600, "height": 900 },
+    { "file": "02-fair-test-gentle.html", "title": "Fair Test × Gentle", "tradeoff": "Same structure (stage pills, diorama, mono measures) on the Gentle palette; reads as a Gentle product, but less toy-bright than the original", "width": 1600, "height": 900 }
+  ]
+}
