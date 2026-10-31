@@ -120,18 +120,21 @@ function injectLead(bodyHtml, lead) {
   return leadHtml + "\n" + bodyHtml;
 }
 
-export function renderSlide(slide, index, total) {
+// `active` marks the slide visible on load; `attrs` adds raw attributes to the <section>.
+export function renderSlide(slide, index, total, { active = index === 0, attrs = "" } = {}) {
   const { directives, body } = slide;
   const slideNo = index + 1;
   const classes = ["slide", ...(directives.class ? directives.class.split(/\s+/) : [])];
-  if (index === 0) classes.push("active");
+  if (active) classes.push("active");
   const petals = classes.includes("cover") ? `<div class="petals" aria-hidden="true"></div>\n` : "";
   const kicker = directives.kicker ? `<div class="kicker">${tokens(directives.kicker)}</div>\n` : "";
   const root = parseContainers(body);
   const bodyHtml = root.children.map((c) => renderNode(c, slideNo)).join("\n");
   const withLead = injectLead(bodyHtml, directives.lead);
-  return `<section class="${classes.join(" ")}">\n${petals}${kicker}${withLead}\n</section>`;
+  return `<section class="${classes.join(" ")}"${attrs}>\n${petals}${kicker}${withLead}\n</section>`;
 }
+
+export { esc };
 
 export function renderDeck({ meta, slides }, themeCss, navJs) {
   const sections = slides.map((s, i) => renderSlide(s, i, slides.length)).join("\n");
