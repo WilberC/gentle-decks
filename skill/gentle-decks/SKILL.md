@@ -39,10 +39,14 @@ Read its `FORMAT.md` before writing the first slide of a session.
 
 ## Flow
 
-1. **Brief.** Get goal, audience, length (slide count or minutes), language, and
-   the source material (files, notes, repository). Ask at most one question, and
-   only when the goal or the content is missing.
-2. **Outline.** Propose a numbered outline: one line per slide with its title,
+1. **Brief.** This is always the first thing the flow does, before any outline
+   or markdown. When the request does not name a topic, ask for it in one plain
+   chat question and wait. With the topic known, ask the approach questionnaire
+   below in a single `ask_user_question` call, then wait for the answers.
+   Language and source material (files, notes, repository) come from the
+   request or the conversation; ask about them only when they are missing and
+   matter for the content.
+2. **Outline ("Crear esquema").** With the answers, propose a numbered outline: one line per slide with its title,
    its one idea, and the component you plan to use (`card`, `steps`, `bars`, …).
    Wait for the user to approve or edit it. This is the Gamma "outline" step;
    skip it only when the user says to go straight to the deck.
@@ -58,6 +62,29 @@ Read its `FORMAT.md` before writing the first slide of a session.
 6. **Iterate.** Apply chat feedback or canvas comments (below), rebuild, refresh.
 7. **Deliver.** `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md -o decks/<slug>/<slug>.html`
    produces the single navigable file (arrows/swipe, `F` fullscreen, `P` PDF export).
+
+## Approach questionnaire
+
+One `ask_user_question` call with exactly these three questions, in this
+order, written in the user's language. Every option is specific to the topic:
+never generic labels such as "Beginners" without saying beginners at what.
+
+| Header | Question | Options (3, single-select) |
+| --- | --- | --- |
+| `Audiencia` | Who is the presentation for? | Three distinct audiences for this topic, from least to most experienced |
+| `Objetivo` | What should the audience take away? | Three distinct takeaways: e.g. confidence to start, a practical comparison, motivation to apply it |
+| `Extensión` | How long should it be? | `Vista rápida — 8 diapositivas`, `Presentación estándar — 12 diapositivas`, `Explicación completa — 16 diapositivas` |
+
+- Put the option you recommend first and say why in its description.
+- Do not add an "Other" option: the tool's free-text row already covers it.
+  A typed answer replaces that question's options; for `Extensión` it is a
+  custom slide count.
+- Header labels stay at most 16 characters and option labels at most 60.
+- Without `ask_user_question`, show the same three questions as numbered lists
+  in chat, each ending with "Otra: …", and wait for the reply.
+- The answers drive the outline: audience sets depth and vocabulary,
+  takeaway sets the closing slide and the story arc, length sets the slide
+  count including the cover.
 
 ## Canvas comments
 
