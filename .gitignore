@@ -8,3 +8,6 @@ design/gentle-decks/
 decks/*/requests.json
 decks/demo/demo.md
 decks/demo/demo.html
+
+# gentle:design sources live in design/ and are versioned here.
+!/design/
