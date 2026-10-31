@@ -255,6 +255,7 @@ test("api/state reports rev, themes, slide statuses, and open requests (S6)", as
   assert.equal(empty.status, 200);
   assert.deepEqual(empty.body.plan, PLAN);
   assert.match(empty.body.rev, /^[a-f0-9]{64}\.(none|[a-f0-9]{64})$/);
+  assert.equal(empty.body.slug, path.basename(dir));
   assert.deepEqual(
     empty.body.deck.slides.map((s) => [s.id, s.index, s.status, s.title]),
     [

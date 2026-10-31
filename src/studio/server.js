@@ -193,6 +193,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     const deck = readDeck(paths);
     return json(res, 200, {
       rev: deckRev(paths),
+      slug: path.basename(paths.dir),
       plan: plan.plan,
       themes: listThemes(paths.dir),
       deck: { exists: Boolean(deck), slides: slideStates(plan.plan, deck) },
