@@ -10,7 +10,9 @@
   "scripts": {
     "build:sample": "node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html",
     "design:sample": "node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks",
-    "check": "node checks/check.mjs && node --test checks/"
+    "check": "node checks/check.mjs && node --test checks/",
+    "smoke:ui": "node checks/ui-smoke.mjs",
+    "studio:demo": "node bin/decks.js studio decks/demo"
   },
   "dependencies": {
     "marked": "^15.0.0"

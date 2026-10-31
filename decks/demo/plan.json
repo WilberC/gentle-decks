@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "title": "Por qué empezar con Python",
+  "topic": "Python para principiantes",
+  "audience": "Estudiantes sin experiencia",
+  "goal": "Confianza para dar sus primeros pasos",
+  "lang": "es",
+  "theme": "gentleman-cute",
+  "slides": [
+    { "id": "cover", "title": "Por qué empezar con Python", "points": ["Una primera lengua para aprender a pensar con código"] },
+    { "id": "first-win", "title": "La primera victoria llega rápido", "points": ["Sintaxis clara y fácil de leer", "Un programa corto produce algo visible desde el primer día"], "layout": "grid-2" },
+    { "id": "reads-like-an-idea", "title": "Leer el código se parece a leer una idea", "points": ["Palabras y estructuras sencillas", "Ejemplo: print(\"Hola, mundo\")"], "layout": "term" },
+    { "id": "core-concepts", "title": "Aprendes conceptos que sirven en cualquier lenguaje", "points": ["Variables y datos", "Condiciones y decisiones", "Repeticiones y funciones"], "layout": "steps" },
+    { "id": "standard-library", "title": "La biblioteca estándar amplía tus posibilidades", "points": ["Archivos, carpetas y fechas sin instalar nada"], "layout": "card" },
+    { "id": "real-projects", "title": "Puedes pasar de ejercicios a proyectos reales", "points": ["Automatizar tareas repetitivas", "Explorar datos", "Crear aplicaciones y prototipos"], "layout": "grid-3" },
+    { "id": "community", "title": "La comunidad convierte los bloqueos en siguientes pasos", "points": ["Documentación, ejemplos y foros", "No necesitas saberlo todo: necesitas una pregunta pequeña"] },
+    { "id": "next-step", "title": "Tu primer paso puede ser hoy", "points": ["Instala Python", "Escribe tu primer script", "Comparte lo que construyes"], "layout": "steps" }
+  ]
+}

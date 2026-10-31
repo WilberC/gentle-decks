@@ -1,2 +1,5 @@
 node_modules/
 design/
+decks/*/requests.json
+decks/demo/demo.md
+decks/demo/demo.html

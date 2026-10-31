@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gentle-decks studio</title>
+<link rel="stylesheet" href="assets/studio.css">
+<script type="module" src="assets/studio.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>gentle-decks</b> <span id="deck-title">studio</span></div>
+  <nav class="tabs" aria-label="Stages">
+    <button type="button" data-stage="plan">Plan</button>
+    <button type="button" data-stage="grid">Grid</button>
+    <button type="button" data-stage="editor">Editor</button>
+  </nav>
+  <a class="btn ghost" href="present" target="_blank" rel="noopener" id="present">Present ↗</a>
+</header>
+<main id="stage" tabindex="-1"><p class="empty">Loading…</p></main>
+<div id="notices" class="notices" role="status" aria-live="polite"></div>
+<dialog id="dialog" aria-labelledby="dialog-title">
+  <form method="dialog">
+    <h2 id="dialog-title"></h2>
+    <p id="dialog-hint" class="muted"></p>
+    <label class="sr-only" for="dialog-text">Text</label>
+    <textarea id="dialog-text" rows="4"></textarea>
+    <menu>
+      <button type="submit" value="cancel" class="btn ghost">Cancel</button>
+      <button type="submit" value="ok" class="btn primary" id="dialog-ok">Send</button>
+    </menu>
+  </form>
+</dialog>
+</body>
+</html>
