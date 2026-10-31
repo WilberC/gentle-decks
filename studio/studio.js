@@ -248,8 +248,23 @@ export async function refresh() {
 }
 
 // Re-render on file changes, but never under the user's cursor.
-async function onChange(rev) {
-  // Same plan and deck: only the requests queue (or a theme file) may have changed.
+let themesRev = null;
+
+async function onChange(rev, themes) {
+  // A deck-local theme changed: re-render so previews and slides pick it up.
+  // The first event also re-renders, so a theme edit before any other change is not missed.
+  const themesChanged = themes !== undefined && themes !== themesRev;
+  if (themes !== undefined) themesRev = themes;
+  if (themesChanged) {
+    const active = document.activeElement;
+    if (active && stageEl().contains(active) && /^(INPUT|TEXTAREA)$/.test(active.tagName)) {
+      app.dirty = true; // re-render when the user leaves the field
+      return;
+    }
+    if (await loadState()) render();
+    return;
+  }
+  // Same plan and deck: only the requests queue may have changed.
   if (rev && (rev === app.state?.rev || rev === app.savedRev)) {
     if (await loadState()) renderRequestsBadge();
     return;
@@ -295,13 +310,13 @@ stageEl().addEventListener("focusout", () => {
 function connectEvents() {
   const source = new EventSource("api/events");
   source.addEventListener("change", (e) => {
-    let rev = null;
+    let data = {};
     try {
-      rev = JSON.parse(e.data).rev;
+      data = JSON.parse(e.data);
     } catch {
-      rev = null;
+      data = {};
     }
-    onChange(rev);
+    onChange(data.rev ?? null, data.themes);
   });
   source.addEventListener("error", () => {
     if (source.readyState === EventSource.CLOSED) {

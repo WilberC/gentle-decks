@@ -329,7 +329,7 @@ test("slides/<id>.html renders artboards with CSP, inspector, and ?theme overrid
   assert.equal(res.headers.get("content-type"), "text/html; charset=utf-8");
   assert.equal(
     res.headers.get("content-security-policy"),
-    `sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src http://127.0.0.1:${studio.port}; img-src data:`,
+    `sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src ${studio.base}assets/; img-src data:`,
   );
   const html = await res.text();
   assert.match(html, /<section class="slide active" data-slide="2" data-slide-id="second">/);
@@ -580,7 +580,7 @@ test("api/events streams a change event after a file write (S11)", async (t) => 
   const expected = (await call(studio, "api/state")).body.rev;
 
   const deadline = Date.now() + 6000;
-  while (!text.includes(`data: ${JSON.stringify({ rev: expected })}`) && Date.now() < deadline) {
+  while (!text.includes(`data: {"rev":${JSON.stringify(expected)},`) && Date.now() < deadline) {
     let timer;
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => reject(new Error(`SSE timeout, got: ${JSON.stringify(text.slice(-200))}`)), Math.max(1, deadline - Date.now()));
@@ -591,7 +591,7 @@ test("api/events streams a change event after a file write (S11)", async (t) => 
     text += decoder.decode(chunk.value, { stream: true });
   }
   assert.match(text, /^event: change\n/);
-  assert.ok(text.includes(`data: ${JSON.stringify({ rev: expected })}`), `got: ${JSON.stringify(text)}`);
+  assert.ok(text.includes(`data: {"rev":${JSON.stringify(expected)},"themes":"`), `got: ${JSON.stringify(text)}`);
   await reader.cancel();
 });
 
@@ -696,5 +696,102 @@ test("studio commands without arguments print usage and exit 2 (S14)", () => {
     assert.equal(r.stdout, "");
     assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\)\n/);
     assert.match(r.stderr, /decks studio <deck-dir> \[--port N\]/);
+  }
+});
+
+// ---- Security hardening (verify findings F1-F4, odd/tasks/deck-studio-ui.md L9) ----
+
+const ONE_SLIDE = `---\ntitle: T\n---\n\nid: cover\n\n# Cover\n\n- one\n`;
+
+test("present is sandboxed like the artboards and keeps the -o bytes (F1)", async (t) => {
+  const dir = makeDeck({ deck: ONE_SLIDE });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const r = await call(studio, "present");
+  assert.equal(r.status, 200);
+  assert.equal(
+    r.headers.get("content-security-policy"),
+    "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
+  );
+  const out = path.join(dir, "out.html");
+  const built = spawnSync(process.execPath, [CLI, deckFile(dir), "-o", out], { encoding: "utf8" });
+  assert.equal(built.status, 0, built.stderr);
+  assert.equal(r.text, fs.readFileSync(out, "utf8"));
+});
+
+test("artboard scripts are limited to the studio assets path (F3)", async (t) => {
+  const studio = await startStudio(makeDeck({ deck: ONE_SLIDE }));
+  t.after(() => stopStudio(studio));
+  const r = await call(studio, "slides/cover.html");
+  assert.equal(
+    r.headers.get("content-security-policy"),
+    `sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src ${studio.base}assets/; img-src data:`,
+  );
+});
+
+test("api/events carries a themes fingerprint that changes with deck themes (F2)", async (t) => {
+  const dir = makeDeck({ deck: ONE_SLIDE });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await fetch(studio.base + "api/events");
+  const reader = res.body.getReader();
+  t.after(() => reader.cancel().catch(() => {}));
+  setTimeout(() => {
+    fs.mkdirSync(path.join(dir, "themes"));
+    fs.writeFileSync(path.join(dir, "themes", "t.css"), "/* t */");
+  }, 100);
+  let text = "";
+  const end = Date.now() + 4000;
+  while (Date.now() < end && !text.includes("event: change")) {
+    const { value } = await reader.read();
+    text += new TextDecoder().decode(value);
+  }
+  const data = JSON.parse(text.split("event: change\ndata: ")[1].split("\n")[0]);
+  assert.equal(data.rev, (await call(studio, "api/state")).body.rev);
+  assert.match(data.themes, /^[0-9a-f]{64}$/);
+});
+
+test("text edits reject a multi-line after and leave the deck unchanged (F4)", async (t) => {
+  const dir = makeDeck({ deck: ONE_SLIDE });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const before = fs.readFileSync(deckFile(dir));
+  const rev = (await call(studio, "api/state")).body.rev;
+  const r = await send(studio, "PUT", "api/slides/cover/text", { rev, before: "one", after: "x\n\n---\n\nid: evil" });
+  assert.equal(r.status, 422);
+  assert.deepEqual(r.body, { error: "invalid", problems: ["$.after: must be a single-line string"] });
+  assert.deepEqual(fs.readFileSync(deckFile(dir)), before);
+});
+
+test("studio routes reject traversal on assets, slides, text, and theme (S5)", async (t) => {
+  const studio = await startStudio(makeDeck({ deck: ONE_SLIDE }));
+  t.after(() => stopStudio(studio));
+  for (const p of ["assets/../plan.json", "assets/..%2f..%2fplan.json", "assets//etc/passwd", "slides/..%2fplan.html", "slides/../../etc/passwd.html"]) {
+    assert.equal((await call(studio, p)).status, 404, p);
+  }
+  for (const theme of ["../../etc/passwd", "..%2f..%2fetc%2fpasswd", "/etc/passwd"]) {
+    const r = await call(studio, `slides/cover.html?theme=${theme}`);
+    assert.equal(r.status, 422, theme);
+    assert.equal(r.body.error, "build");
+  }
+  assert.equal((await send(studio, "PUT", "api/slides/..%2f..%2fplan/text", { rev: "x", before: "a", after: "b" })).status, 404);
+});
+
+test("failed text edits leave the deck byte-identical (S10)", async (t) => {
+  const deck = `---\ntitle: T\n---\n\nid: cover\n\n# Cover\n\n- dup dup\n\n---\n\nid: two\nlayout: grid-2\n\n## Two\n\n- other\n`;
+  const dir = makeDeck({ deck });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const before = fs.readFileSync(deckFile(dir));
+  const rev = (await call(studio, "api/state")).body.rev;
+  for (const body of [
+    { rev, before: "other", after: "x" },
+    { rev, before: "layout: grid-2", after: "x" },
+    { rev, before: "", after: "x" },
+    { rev: "stale", before: "dup", after: "x" },
+  ]) {
+    const r = await send(studio, "PUT", "api/slides/cover/text", body);
+    assert.notEqual(r.status, 200, JSON.stringify(body));
+    assert.deepEqual(fs.readFileSync(deckFile(dir)), before);
   }
 });

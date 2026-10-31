@@ -79,6 +79,24 @@ async function readJson(req) {
 const newRequestId = () => crypto.randomBytes(6).toString("hex");
 
 // File fingerprints used to decide whether to report a change; the rev is only computed on a change.
+const PRESENT_CSP = "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:";
+
+// sha256 over deck-local theme names and contents, so the UI repaints on theme-only edits (F2).
+function themesRev(paths) {
+  const hash = crypto.createHash("sha256");
+  try {
+    for (const name of fs.readdirSync(paths.themes).sort()) {
+      if (!name.endsWith(".css")) continue;
+      hash.update(`${name}\0`);
+      hash.update(fs.readFileSync(path.join(paths.themes, name)));
+      hash.update("\0");
+    }
+  } catch {
+    // no deck themes
+  }
+  return hash.digest("hex");
+}
+
 function fingerprint(paths) {
   const parts = [];
   for (const file of [paths.plan, paths.deck, paths.requests]) {
@@ -145,7 +163,8 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     res.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
-      "Content-Security-Policy": `sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src http://${LOOPBACK}:${port()}; img-src data:`,
+      // Opaque origin; only the studio's own assets may run inside the artboard (F3).
+      "Content-Security-Policy": `sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src http://${LOOPBACK}:${port()}/${token}/assets/; img-src data:`,
     });
     res.end(withInspector);
   }
@@ -158,7 +177,12 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       return json(res, 422, { error: "build", message: err.message });
     }
     if (html === null) return json(res, 404, { error: "not-found" });
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    // Deck markdown may carry raw HTML: run it in an opaque origin with no network (F1).
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Security-Policy": PRESENT_CSP,
+    });
     res.end(html);
   }
 
@@ -188,7 +212,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       const next = fingerprint(paths);
       if (next === last) return;
       last = next;
-      res.write(`event: change\ndata: ${JSON.stringify({ rev: deckRev(paths) })}\n\n`);
+      res.write(`event: change\ndata: ${JSON.stringify({ rev: deckRev(paths), themes: themesRev(paths) })}\n\n`);
     }, POLL_MS);
     const beat = setInterval(() => res.write(": heartbeat\n\n"), HEARTBEAT_MS);
     const stop = () => {
@@ -245,6 +269,10 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     const rev = deckRev(paths);
     if (value.rev !== rev) return json(res, 409, { error: "stale", rev });
     const before = typeof value.before === "string" ? value.before.trim() : "";
+    if (typeof value.after === "string" && /[\r\n]/.test(value.after) && before && !/[\r\n]/.test(before)) {
+      // A newline could inject directives or slide separators (F4); the inspector sends one line.
+      return json(res, 422, { error: "invalid", problems: ["$.after: must be a single-line string"] });
+    }
     if (!before || /[\r\n]/.test(before) || typeof value.after !== "string") {
       return json(res, 422, {
         error: "invalid",
