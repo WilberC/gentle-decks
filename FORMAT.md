@@ -136,7 +136,17 @@ single-line; points must not start with `---` or `:::`.
 ## Themes
 
 `themes/CONTRACT.md` lists the selectors every theme must style.
-`decks theme check <name>` prints `ok: <name>` or the missing selectors.
+`decks theme check <name|path.css>` prints `ok: <name>` or the missing selectors.
+A deck's `theme:` is looked up in `<deck dir>/themes/<name>.css` first, then in
+the repository `themes/`; a missing theme fails the build with
+`build failed: theme not found: <name>`.
+
+## Deck directory and studio
+
+`decks/<slug>/` holds `plan.json`, the deck `<slug>.md`, optional proposed
+themes in `themes/`, and the studio's `requests.json` queue.
+`decks studio decks/<slug>` serves the studio on 127.0.0.1 and prints its URL;
+see README "Studio" and `odd/tasks/deck-studio-ui.md` (S5-S12) for the API.
 
 ## Renderer contract
 

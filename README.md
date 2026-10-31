@@ -28,6 +28,35 @@ id even when slides move. Rebuilding removes stale slide files and keeps
 `comments.json`. `plan.json` holds the editable outline; `themes/CONTRACT.md`
 makes themes interchangeable.
 
+## Studio
+
+```bash
+node bin/decks.js studio decks/<slug>          # needs decks/<slug>/plan.json
+node bin/decks.js studio requests decks/<slug> # open requests as JSON
+node bin/decks.js studio resolve decks/<slug> <id...>
+```
+
+A local web app (127.0.0.1, secret token in the URL) with three stages:
+
+- **Plan** — edit the outline (text, add, merge, move, delete, comment) and
+  pick the look and feel from theme previews rendered with your own slides.
+- **Grid** — every slide as it is written; pending slides shimmer until the
+  agent saves them.
+- **Editor** — thumbnail rail, large view, inline text editing, anchored
+  comments, layout switch, "Redo with agent", add slide, overflow badges,
+  and a Present link.
+
+Try it with `npm run studio:demo` (an eight-slide Python plan in
+`decks/demo/`); write `decks/demo/demo.md` with `plan scaffold` to see the grid
+and editor. Append `#plan`, `#grid`, or `#editor` to the URL to open a stage.
+`npm run smoke:ui` drives the whole UI in a headless Edge/Chrome/Chromium
+(`BROWSER=<path>` to choose) and checks the files it writes.
+
+The studio edits `plan.json` and deck text directly; everything that needs
+writing (generate, comments, redo, layout, new slides, overflow) is queued in
+`requests.json` and printed as `request <id> <kind> <slide>` for the agent.
+A deck may ship its own themes in `decks/<slug>/themes/`.
+
 ## Agent workflow
 
 [`skill/gentle-decks/SKILL.md`](skill/gentle-decks/SKILL.md) is the
@@ -58,6 +87,8 @@ produces a silently broken deck.
 | `src/design.js` | Per-slide canvas artboards and `design.json` |
 | `src/plan.js` | `plan.json` validation and deck scaffolding |
 | `src/theme.js` | Theme contract check |
+| `src/studio/` | Studio server, API, requests queue, text edits |
+| `studio/` | Studio web UI (no dependencies, no build) and artboard inspector |
 | `src/deck-nav.js` | Inlined navigation engine (keyboard, swipe, print) |
 | `themes/` | Deck themes (one CSS file each) |
 | `decks/sample/` | Sample deck used as the format fixture |

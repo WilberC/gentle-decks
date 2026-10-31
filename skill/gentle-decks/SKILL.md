@@ -32,7 +32,9 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
 | Format contract | `<decks-repo>/FORMAT.md` |
 | Outline | `decks/<slug>/plan.json` in the current project |
 | Deck source | `decks/<slug>/<slug>.md` in the current project |
-| Canvas preview | `design/<slug>/` (generated with `--design`) |
+| Studio | `node <decks-repo>/bin/decks.js studio decks/<slug>` |
+| Proposed themes | `decks/<slug>/themes/<name>.css` |
+| Canvas preview (optional) | `design/<slug>/` (generated with `--design`) |
 | Presentation file | `decks/<slug>/<slug>.html` (generated with `-o`) |
 
 `<decks-repo>` is the gentle-decks checkout (currently `~/Projects/Personal/gentle-decks`).
@@ -51,23 +53,51 @@ Read its `FORMAT.md` before writing the first slide of a session.
    `decks/<slug>/plan.json` (see `FORMAT.md`, "Plan file"): the questionnaire
    answers as `audience`/`goal`, one entry per slide with a stable kebab-case
    `id` named after its idea, `title`, `points`, and the planned `layout`
-   (`card`, `steps`, `bars`, …). Run `plan check` until it prints `ok`. Show the
-   outline as a numbered list and wait for approval. The user may edit text,
-   add, merge, move, or comment slides: apply each change to `plan.json`,
-   keeping the ids of slides that survive, and show it again. Skip approval
-   only when the user says to go straight to the deck.
-3. **Write.** `node <decks-repo>/bin/decks.js plan scaffold decks/<slug>/plan.json -o decks/<slug>/<slug>.md`
-   gives the skeleton; then write each slide's real content with the planned
-   component, honoring the slide's `notes`. Never change an `id:` line.
-4. **Build for the canvas.**
-   `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md --design design/<slug>`
-   writes `slides/<id>.html` per slide plus `design.json`. On `build failed`, fix
-   the reported slide and rebuild.
-5. **Preview.** Call the `gentle_design` tool with `action: "open"` and the slug,
-   and report the URL. Call it again after every rebuild to refresh the tab.
-6. **Iterate.** Apply chat feedback or canvas comments (below), rebuild, refresh.
+   (`card`, `steps`, `bars`, …). Run `plan check` until it prints `ok`.
+3. **Look and feel.** Propose two or three themes for this topic and audience
+   next to the existing ones: write each as `decks/<slug>/themes/<name>.css`
+   following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
+   until it prints `ok`. Keep the existing themes as options.
+4. **Open the studio.** Start it in the background and watch its output:
+   `node <decks-repo>/bin/decks.js studio decks/<slug>` prints
+   `studio: http://127.0.0.1:<port>/<token>/`, then one `request <id> <kind> <slide>`
+   line per user action. Use a monitor (for example the `monitor` tool on that
+   command) so each line reaches you as it happens. Give the user the URL.
+   In the **Plan** stage the user edits the outline (text, add, merge, move,
+   delete, comment) and picks a theme; the studio writes `plan.json` directly.
+   Without the studio (no browser), show the outline as a numbered list in chat
+   and apply the user's changes to `plan.json` yourself.
+5. **Generate** (request `generate`, or approval in chat). Re-read `plan.json`
+   (the user may have changed it), run
+   `node <decks-repo>/bin/decks.js plan scaffold decks/<slug>/plan.json -o decks/<slug>/<slug>.md`,
+   then write the slides **one at a time in order**, saving the deck after each
+   one, so the studio grid fills live. Honor each slide's `notes` and planned
+   `layout`; never change an `id:` line. After writing, rebuild once with `-o`
+   to catch `build failed` errors and fix the reported slide.
+6. **Refine.** Handle every open request (below) as it arrives, then resolve it.
 7. **Deliver.** `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md -o decks/<slug>/<slug>.html`
    produces the single navigable file (arrows/swipe, `F` fullscreen, `P` PDF export).
+   The studio's **Present** link shows the same file live.
+
+## Studio requests
+
+The studio queues user actions in `decks/<slug>/requests.json`.
+`node <decks-repo>/bin/decks.js studio requests decks/<slug>` prints the open ones as
+JSON; `studio resolve decks/<slug> <id...>` closes them. Read the open list
+after every `request …` line and whenever you resume.
+
+| Kind | What to do |
+| --- | --- |
+| `generate` | Step 5. |
+| `comment` | Apply the comment to the slide `slideId` (plan stage: to `plan.json`; after generation: to that slide's markdown). `excerpt`/`selector` point at the element. |
+| `redo` | Rewrite slide `slideId` following `text`; keep its `id:`. |
+| `layout` | Rewrite slide `slideId` with the container `layout`, keeping its content. |
+| `add-slide` | Add a slide after `slideId` about `text`, in `plan.json` and in the deck, with a new unique id. |
+| `overflow` | Slide `slideId` is taller than 1600×900: shorten it or split it into two slides. |
+
+Text edits made in the studio's Edit mode are already written to the deck; do
+not undo them. Resolve each request only after the change is saved; leave a
+request open and tell the user why when you cannot apply it.
 
 ## Approach questionnaire
 
@@ -92,7 +122,12 @@ never generic labels such as "Beginners" without saying beginners at what.
   takeaway sets the closing slide and the story arc, length sets the slide
   count including the cover.
 
-## Canvas comments
+## Canvas comments (optional gentle-design preview)
+
+The studio is the default preview. When the user prefers the gentle-design
+canvas, build with `--design design/<slug>` and open it with the `gentle_design`
+tool (`action: "open"`).
+
 
 Comments live in `design/<slug>/comments.json`. Each comment's `file` is a slide
 artboard: `slides/<id>.html` is the slide whose `id:` directive is `<id>`
@@ -112,5 +147,5 @@ its open comments first.
 
 ## Output Contract
 
-Return: the slug, the slide count, the files changed this turn, the canvas URL,
-the comment ids resolved this turn, and any open question.
+Return: the slug, the slide count, the files changed this turn, the studio URL,
+the request (or canvas comment) ids resolved this turn, and any open question.

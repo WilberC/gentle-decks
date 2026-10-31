@@ -27,9 +27,9 @@ Pi extension (phase 5, out of scope). Branch `feat/studio`. Read `FORMAT.md`, `t
 
 | ID | Specs | Task | Route | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S4, S5, S6, S7, S8, S9, S10, S11, S12, S14 | Studio server, API, CLI (`studio`, `requests`, `resolve`), deck-local theme lookup, inspector script; node:test over HTTP | worker, test-first | pending |
-| T2 | S2, S3, S7, S13 | Studio UI: plan stage, look and feel, grid, editor | worker | pending |
-| T3 | S15 | Skill + docs | inline | pending |
+| T1 | S4, S5, S6, S7, S8, S9, S10, S11, S12, S14 | Studio server, API, CLI (`studio`, `requests`, `resolve`), deck-local theme lookup, inspector script; node:test over HTTP | worker, test-first | 2c5ae4f |
+| T2 | S2, S3, S7, S13 | Studio UI: plan stage, look and feel, grid, editor | inline (worker failed) | fcb0147 |
+| T3 | S15 | Skill + docs | inline | "docs: describe the studio in skill and docs" |
 | T4 | S1 | Verify (security item 2), merge to main | verify + inline | pending |
 
 ## Log
@@ -38,3 +38,7 @@ Pi extension (phase 5, out of scope). Branch `feat/studio`. Read `FORMAT.md`, `t
 - L2 (decision): zero-dependency HTML/JS UI served by a Node `http` server in this repo (recommended option; no framework, no build). Agent bridge = `requests.json` + stdout `request …` lines (watchable with the monitor tool) until the Pi extension.
 - L3 (decision): no headless browser library is installed; UI verification uses the HTTP API tests plus a headless Chromium (`/Applications/Chromium.app`) screenshot smoke check.
 - L4 (contract shared by T1 and T2, so both run in parallel): static UI assets live in `studio/` (owned by T2) and are served by T1 at `/<token>/` (`index.html`) and `/<token>/assets/<file>` from `studio/`. The inspector `studio/inspector.js` is owned by T1. postMessage protocol (artboard → parent, `*` target, parent validates `event.source` is a known iframe): `{type:"gd:ready", slideId, overflow:boolean, height:number}` on load and resize; `{type:"gd:pick", slideId, selector, excerpt, text}` on click in comment or edit mode. Parent → artboard: `{type:"gd:mode", mode:"view"|"comment"|"edit"}`. In `edit` mode the inspector makes the clicked text element `contenteditable`, and on blur posts `{type:"gd:edit", slideId, before, after}` (innerText before/after, trimmed). Overflow = `document.querySelector('.slide').scrollHeight > 900`.
+- L5 (evidence, T1): worker report — 16 studio HTTP tests (RED 0/16 → GREEN 16/16); full suite 43 pass; differential vs HEAD copy: `-o` and `--design` bytes identical.
+- L6 (incident, T2): UI worker returned no report and no files; UI written inline. Chromium headless hangs on this host even for a file:// page; Edge headless works. `--virtual-time-budget` never settles with the open SSE stream, so screenshots use `--timeout`.
+- L7 (evidence, T2): screenshots of Plan, Grid, Editor reviewed. `checks/ui-smoke.mjs` (DevTools protocol, no deps) passes 12 checks: edit title, add (derived id), move, merge, plan comment, theme, generate → grid, grid fills live via SSE, editor comment with selector/excerpt, layout request, requests panel, inline text edit rewrites only that text. Found and fixed: requests panel never refreshed (requests do not change rev) and hash navigation needed a hashchange listener.
+- L8 (decision): `decks/demo/plan.json` committed as the manual-test fixture (`npm run studio:demo`); generated `demo.md`/`demo.html` and all `requests.json` are gitignored.
