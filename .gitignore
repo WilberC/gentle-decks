@@ -1,5 +1,5 @@
 node_modules/
-design/
+design/gentle-decks/
 decks/*/requests.json
 decks/demo/demo.md
 decks/demo/demo.html
