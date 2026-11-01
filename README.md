@@ -11,7 +11,11 @@ HTML file with no external requests.
   <img width="220" src="https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/docs/assets/brand/built-with-gentle-ai.png" alt="Built with Gentle-AI" />
 </a>
 
-![A rendered slide](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cover.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/studio-grid.png" alt="The studio: outline on the left, live slide grid in the center, comments on the right" width="100%" />
+  <br />
+  <sub>The studio: edit the outline, watch the slides fill in, comment on any slide.</sub>
+</p>
 
 ## Quick start
 
@@ -28,7 +32,7 @@ Requires Node.js 18 or later.
 
 ## What you get
 
-| | |
+| Feature | What it does |
 | --- | --- |
 | **Guided flow** | The agent asks about audience, goal and length, proposes an outline, then writes slide by slide. |
 | **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. |
@@ -36,9 +40,18 @@ Requires Node.js 18 or later.
 | **Small diffs** | The same markdown always renders byte-identical HTML, so a fix is an edit to one slide. |
 | **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic. |
 
-![The studio](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/studio-grid.png)
+What the rendered slides look like (`gentleman-cute` theme):
 
-![A card slide](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cards.png)
+<table>
+  <tr>
+    <td width="50%"><img src="https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cover.png" alt="Cover slide" /></td>
+    <td width="50%"><img src="https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cards.png" alt="Slide with two cards" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Cover slide</sub></td>
+    <td align="center"><sub>Cards and a callout</sub></td>
+  </tr>
+</table>
 
 ## Learn more
 
