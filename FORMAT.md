@@ -148,7 +148,8 @@ A deck's `theme:` is looked up in three places, and the first match wins:
 
 A missing theme fails the build with `build failed: theme not found: <name>`.
 `decks theme check <name>` resolves a name in the user themes directory, then
-in the bundled `themes/`.
+in the bundled `themes/`. See [docs/themes.md](docs/themes.md) for the layout
+and how to keep your own themes.
 
 ## Deck directory and studio
 

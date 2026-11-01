@@ -1,7 +1,8 @@
 # Theme contract
 
-A theme is one CSS file, `themes/<name>.css` (lowercase letters, digits,
-hyphens). The renderer inlines it into every deck and design artboard, so any
+A theme is one CSS file, `<name>.css` (lowercase letters, digits, hyphens),
+in a deck's `themes/`, your personal themes directory, or the built-in
+`themes/` (see [docs/themes.md](../docs/themes.md)). The renderer inlines it into every deck and design artboard, so any
 theme can render any deck. `decks theme check <name>` verifies the selectors
 below; a theme missing one fails the check.
 

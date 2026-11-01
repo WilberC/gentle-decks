@@ -37,7 +37,7 @@ Requires Node.js 18 or later.
 | **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. |
 | **One file out** | Theme CSS and navigation are inlined. Arrows or swipe to navigate, `F` fullscreen, `P` to export to PDF. |
 | **Small diffs** | The same markdown always renders byte-identical HTML, so a fix is an edit to one slide. |
-| **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic. Keep your own in `~/.config/gentle-decks/themes/` to use them in every deck. |
+| **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic. Keep your own in `~/.config/gentle-decks/themes/` to use them in every deck ([where themes live](docs/themes.md)). |
 
 What the rendered slides look like (`gentleman-cute` theme):
 
@@ -60,7 +60,7 @@ What the rendered slides look like (`gentleman-cute` theme):
 | Use the studio | [docs/studio.md](docs/studio.md) |
 | Run the CLI directly | [docs/cli.md](docs/cli.md) |
 | Make a theme | [themes/CONTRACT.md](themes/CONTRACT.md) |
-| Reuse my themes across decks | [FORMAT.md, "Themes"](FORMAT.md#themes) |
+| Where themes live, and keep my own | [docs/themes.md](docs/themes.md) |
 | See what the agent does | [skill/gentle-decks/SKILL.md](skill/gentle-decks/SKILL.md) |
 | Contribute or run the checks | [docs/development.md](docs/development.md) |
 

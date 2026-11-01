@@ -49,5 +49,5 @@ Bundled themes: `gentleman-cute`, `fair-test` (bright, white, rainbow method
 stages) and `fair-test-gentle` (the same structure in Gentle colors). A deck
 can ship its own in `decks/<slug>/themes/` (shown as *propuesto*), and your own
 themes in `~/.config/gentle-decks/themes/` appear in every deck (shown as *mío*);
-see [FORMAT.md](../FORMAT.md#themes) for the lookup order. Themes must follow
+see [themes.md](themes.md) for where themes live and the lookup order. Themes must follow
 [themes/CONTRACT.md](../themes/CONTRACT.md).
