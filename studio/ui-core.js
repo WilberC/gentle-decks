@@ -1,5 +1,4 @@
 // Studio state, API client, notices and dialog. Shared by the shell (studio.js) and the columns.
-// Contract: odd/tasks/studio-workspace.md (S2-S7, S10) and odd/tasks/deck-studio-ui.md (S5-S13).
 import { refresh, renderAreas } from "./studio.js";
 
 export const SLIDE_W = 1600;

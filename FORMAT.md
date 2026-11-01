@@ -147,7 +147,7 @@ the repository `themes/`; a missing theme fails the build with
 `decks/<slug>/` holds `plan.json`, the deck `<slug>.md`, optional proposed
 themes in `themes/`, and the studio's `requests.json` queue.
 `decks studio decks/<slug>` serves the studio on 127.0.0.1 and prints its URL;
-see README "Studio" and `odd/tasks/deck-studio-ui.md` (S5-S12) for the API.
+see README "Studio" for the commands and the request kinds.
 
 ## Renderer contract
 

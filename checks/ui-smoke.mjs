@@ -1,7 +1,7 @@
 // Browser smoke test of the studio workspace over the DevTools protocol (no dependencies).
 // Run: npm run smoke:ui   (needs Microsoft Edge, Chrome or Chromium; set BROWSER to override)
 // Starts its own studio on a temp deck, drives the single workspace (Estilo / Slide / Grid, outline,
-// comments), and checks the files on disk. Contract: odd/tasks/studio-workspace.md (S2-S7, S10).
+// comments), and checks the files on disk.
 import { spawn, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";

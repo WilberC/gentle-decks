@@ -11,3 +11,6 @@ decks/demo/demo.html
 
 # gentle:design sources live in design/ and are versioned here.
 !/design/
+
+# ODD working notes (feature specs and task logs) stay local
+odd/

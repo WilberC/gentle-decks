@@ -1,6 +1,5 @@
 // Studio workspace shell: slide frames, live updates, rendering, routing glue, skins and header.
 // State and the API client live in ui-core.js; the three columns live in ws-*.js.
-// Contract: odd/tasks/studio-workspace.md (S2-S7, S10) and odd/tasks/deck-studio-ui.md (S5-S13, L4).
 import {
   SLIDE_W,
   app,

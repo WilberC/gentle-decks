@@ -867,7 +867,7 @@ test("studio commands without arguments print usage and exit 2 (S14)", () => {
   }
 });
 
-// ---- Security hardening (verify findings F1-F4, odd/tasks/deck-studio-ui.md L9) ----
+// ---- Security hardening ----
 
 const ONE_SLIDE = `---\ntitle: T\n---\n\nid: cover\n\n# Cover\n\n- one\n`;
 
