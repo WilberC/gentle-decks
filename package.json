@@ -16,7 +16,7 @@
     "url": "git+https://github.com/WilberC/gentle-decks.git"
   },
   "bin": {
-    "decks": "./bin/decks.js"
+    "decks": "bin/decks.js"
   },
   "files": [
     "bin",
