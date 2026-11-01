@@ -1,18 +1,19 @@
 # gentle-decks
 
-Markdown decks that render to self-contained HTML presentations: one input
-file, one output file, theme CSS and navigation JS inlined, no external
-requests. Deterministic — the same markdown always produces byte-identical
-HTML, so corrections are small diffs.
+**Ask your agent for a presentation. Get one HTML file you can present anywhere.**
 
-Extracted from hand-authored gist decks; intended to become a gentle-shell
-skill (agent writes content, renderer handles mechanics, gentle-design canvas
-shows the result).
+gentle-decks is a [Gentle Shell](https://github.com/Gentleman-Programming/gentle-shell)
+and [Pi](https://pi.dev) package. The agent writes the slides in markdown; the
+renderer handles layout, theme and navigation, and produces one self-contained
+HTML file with no external requests.
 
-## Install
+<a href="https://github.com/Gentleman-Programming/gentle-ai">
+  <img width="220" src="https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/docs/assets/brand/built-with-gentle-ai.png" alt="Built with Gentle-AI" />
+</a>
 
-gentle-decks is a Pi package: installing it adds the `gentle-decks` skill to
-the agent, and the skill runs the bundled renderer and studio.
+![A rendered slide](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cover.png)
+
+## Quick start
 
 ```bash
 # Gentle Shell
@@ -22,109 +23,36 @@ gentle-shell install git:github.com/WilberC/gentle-decks
 pi install git:github.com/WilberC/gentle-decks
 ```
 
-Restart the session (or `/reload`), then ask for a presentation. Requires
-Node.js 18 or later. The optional canvas preview uses the `gentle_design` tool
-from Gentle Shell; in plain Pi the renderer and the studio work the same.
+Restart the session (or `/reload`) and ask: *"Make a presentation about …"*.
+Requires Node.js 18 or later.
 
-To try a local checkout without installing it, run `npm install` and then
-`pi -e ./` from the repository root.
+## What you get
 
-## Usage
-
-```bash
-npm install
-node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html
-node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks
-node bin/decks.js plan check plan.json
-node bin/decks.js plan scaffold plan.json -o decks/<slug>/<slug>.md
-node bin/decks.js theme check gentleman-cute
-npm run check           # structural checks + node:test suites
-```
-
-`-o` writes the navigable presentation. `--design <dir>` writes one static
-artboard per slide (`slides/<id>.html`, 1600×900) plus `design.json`, so the
-gentle-design canvas previews every slide and canvas comments follow the slide
-id even when slides move. Rebuilding removes stale slide files and keeps
-`comments.json`. `plan.json` holds the editable outline; `themes/CONTRACT.md`
-makes themes interchangeable.
-
-## Studio
-
-```bash
-node bin/decks.js studio decks/<slug>                  # needs decks/<slug>/plan.json
-node bin/decks.js studio requests decks/<slug>         # open requests as JSON
-node bin/decks.js studio reply decks/<slug> <id> <text> # answer in the comment thread
-node bin/decks.js studio resolve decks/<slug> <id...> [--reply <text>]
-```
-
-A local web app (127.0.0.1, secret token in the URL) with one workspace for the
-whole flow:
-
-- **Outline** (left, always visible) — every slide with its thumbnail, status
-  (`pendiente`, `escribiendo…`, `lista`, `no cabe`) and open comments. Edit the
-  text, add, merge, move, delete, or comment a slide in place; keyboard
-  shortcuts on the focused row (`e`, `↑↓`, `Alt+↑↓`, `m`, `c`, `a`, `Delete`).
-- **Center** — three views: **Estilo** (theme previews rendered with your own
-  outline, plus Generate), **Slide** (the selected slide with Ver / Comentar /
-  Editar modes, layout switch and overflow warning) and **Grid** (all slides,
-  filling in live as the agent writes them).
-- **Comments** (right) — one thread per slide; the agent answers in the same
-  thread with `studio reply` or `studio resolve --reply`.
-
-Two skins: **Gentle** (default, the Gentle brand palette) and **Flat** (the
-Gentle Shell terminal palette). Switch in the header; the choice is remembered,
-and `?skin=flat` forces it. Append `#style`, `#slide`, or `#grid` to the URL
-to open a view (`#plan` and `#editor` still work).
-
-Try it with `npm run studio:demo` (an eight-slide Python plan in
-`decks/demo/`); write `decks/demo/demo.md` with `plan scaffold` to see the
-slides. `npm run smoke:ui` drives the whole UI in a headless Edge/Chrome/Chromium
-(`BROWSER=<path>` to choose) and checks the files it writes.
-
-The studio edits `plan.json` and deck text directly; everything that needs
-writing (generate, comments, redo, layout, new slides, overflow) is queued in
-`requests.json` and printed as `request <id> <kind> <slide>` for the agent.
-A deck may ship its own themes in `decks/<slug>/themes/`. Bundled deck themes:
-`gentleman-cute`, `fair-test` (bright, white, rainbow method stages) and
-`fair-test-gentle` (the same structure in Gentle colors).
-
-## Agent workflow
-
-[`skill/gentle-decks/SKILL.md`](skill/gentle-decks/SKILL.md) is the
-Gamma-style flow for gentle-shell: brief → outline approval → markdown →
-canvas preview → apply canvas comments to the slide's markdown → final HTML.
-It ships with the package (see Install).
-
-Open the generated HTML in a browser: arrows/swipe/click to navigate,
-`F` fullscreen, `P` exports one slide per page to PDF.
-
-## Format
-
-The markdown→slide contract lives in [FORMAT.md](FORMAT.md): slide
-separators, per-slide directives (`kicker`, `class`, `lead`), component
-containers (`::: card`, `::: grid-2`, `::: steps`, `::: term`, `::: bars`,
-`::: stat`, `::: pills`), and inline color tokens (`[[pink|text]]`).
-
-Unknown containers fail the build with the slide number; a typo never
-produces a silently broken deck.
-
-## Layout
-
-| Path | Purpose |
+| | |
 | --- | --- |
-| `bin/decks.js` | CLI entry |
-| `src/parse.js` | Frontmatter, slide splitting, container tree |
-| `src/render.js` | Markdown and containers → slide HTML |
-| `src/design.js` | Per-slide canvas artboards and `design.json` |
-| `src/plan.js` | `plan.json` validation and deck scaffolding |
-| `src/theme.js` | Theme contract check |
-| `src/studio/` | Studio server, API, requests queue, text edits |
-| `studio/` | Studio web UI (no dependencies, no build) and artboard inspector |
-| `src/deck-nav.js` | Inlined navigation engine (keyboard, swipe, print) |
-| `themes/` | Deck themes (one CSS file each) |
-| `decks/sample/` | Sample deck used as the format fixture |
-| `checks/` | Structural verification and `node:test` suites |
-| `skill/gentle-decks/` | Agent skill, loaded when the package is installed |
+| **Guided flow** | The agent asks about audience, goal and length, proposes an outline, then writes slide by slide. |
+| **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. |
+| **One file out** | Theme CSS and navigation are inlined. Arrows or swipe to navigate, `F` fullscreen, `P` to export to PDF. |
+| **Small diffs** | The same markdown always renders byte-identical HTML, so a fix is an edit to one slide. |
+| **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic. |
+
+![The studio](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/studio-grid.png)
+
+![A card slide](https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/slide-cards.png)
+
+## Learn more
+
+| I want to… | Read |
+| --- | --- |
+| Write or fix slides by hand | [FORMAT.md](FORMAT.md) |
+| Use the studio | [docs/studio.md](docs/studio.md) |
+| Run the CLI directly | [docs/cli.md](docs/cli.md) |
+| Make a theme | [themes/CONTRACT.md](themes/CONTRACT.md) |
+| See what the agent does | [skill/gentle-decks/SKILL.md](skill/gentle-decks/SKILL.md) |
+| Contribute or run the checks | [docs/development.md](docs/development.md) |
+
+The canvas preview uses Gentle Shell's `gentle_design` tool; in plain Pi the
+renderer and the studio work the same.
 
 ## License
 
