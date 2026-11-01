@@ -1,6 +1,7 @@
 // Theme lookup and the theme contract: selectors every theme must style.
 // See themes/CONTRACT.md and FORMAT.md.
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,26 +47,46 @@ function themeNames(dir) {
     .sort();
 }
 
-// The deck may ship proposed themes in `<deck dir>/themes/`; they shadow repo themes.
+// The deck may ship proposed themes in `<deck dir>/themes/`; they shadow user and repo themes.
 export const deckThemesDir = (deckDir) => (deckDir ? path.join(deckDir, "themes") : null);
 
-export function listThemes(deckDir) {
-  const local = themeNames(deckThemesDir(deckDir) ?? "");
-  const shadowed = new Set(local);
-  return [
-    ...local.map((name) => ({ name, source: "deck" })),
-    ...themeNames(REPO_THEMES_DIR).filter((name) => !shadowed.has(name)).map((name) => ({ name, source: "repo" })),
-  ];
+// Themes the user keeps for every deck: $GENTLE_DECKS_THEMES, else
+// $XDG_CONFIG_HOME/gentle-decks/themes, else ~/.config/gentle-decks/themes.
+export function userThemesDir(env = process.env) {
+  if (env.GENTLE_DECKS_THEMES) return path.resolve(env.GENTLE_DECKS_THEMES);
+  const config = env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+  return path.join(config, "gentle-decks", "themes");
 }
 
-// Resolves a theme for a deck: deck-local first, then the repo. Returns null when missing.
+// Theme directories in lookup order; earlier sources shadow later ones by name.
+export function themeSources(deckDir) {
+  const sources = [];
+  const deck = deckThemesDir(deckDir);
+  if (deck) sources.push({ dir: deck, source: "deck" });
+  sources.push({ dir: userThemesDir(), source: "user" }, { dir: REPO_THEMES_DIR, source: "repo" });
+  return sources;
+}
+
+export function listThemes(deckDir) {
+  const seen = new Set();
+  const themes = [];
+  for (const { dir, source } of themeSources(deckDir)) {
+    for (const name of themeNames(dir)) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      themes.push({ name, source });
+    }
+  }
+  return themes;
+}
+
+// Resolves a theme: deck-local first, then the user's themes, then the repo. Returns null when missing.
 export function findTheme(name, deckDir) {
   if (!THEME_NAME.test(name)) return null;
-  for (const dir of [deckThemesDir(deckDir), REPO_THEMES_DIR]) {
-    if (!dir) continue;
+  for (const { dir, source } of themeSources(deckDir)) {
     const file = path.join(dir, `${name}.css`);
-    if (!fs.existsSync(file)) continue;
-    return { name, file, source: dir === REPO_THEMES_DIR ? "repo" : "deck", css: fs.readFileSync(file, "utf8") };
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) continue;
+    return { name, file, source, css: fs.readFileSync(file, "utf8") };
   }
   return null;
 }

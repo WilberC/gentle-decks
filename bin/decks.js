@@ -65,7 +65,8 @@ function planCommand() {
   console.log(`${plan.slides.length} slides -> ${target}`);
 }
 
-// A deck resolves its theme next to itself first (`<deck dir>/themes/<name>.css`), then in the repo.
+// A deck resolves its theme next to itself first (`<deck dir>/themes/<name>.css`), then in the
+// user themes dir, then in the repo (see FORMAT.md, "Themes").
 function deckTheme(themeName, deckDir) {
   const theme = findTheme(themeName, deckDir);
   if (!theme) throw new Error(`theme not found: ${themeName}`);
@@ -118,8 +119,9 @@ function themeCommand() {
     console.error(`invalid theme name ${JSON.stringify(name)}`);
     process.exit(1);
   }
-  const file = asPath ? path.resolve(name) : path.join(root, "themes", `${name}.css`);
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+  // A name resolves like a deck theme without a deck: user themes, then bundled ones.
+  const file = asPath ? path.resolve(name) : findTheme(name, null)?.file;
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     console.error(`theme not found: ${asPath ? name : `themes/${name}.css`}`);
     process.exit(1);
   }

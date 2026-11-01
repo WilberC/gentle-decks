@@ -34,6 +34,7 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
 | Deck source | `decks/<slug>/<slug>.md` in the current project |
 | Studio | `node <decks-repo>/bin/decks.js studio decks/<slug>` |
 | Proposed themes | `decks/<slug>/themes/<name>.css` |
+| User themes (every deck) | `$GENTLE_DECKS_THEMES`, else `$XDG_CONFIG_HOME/gentle-decks/themes`, else `~/.config/gentle-decks/themes` |
 | Canvas preview (optional) | `design/<slug>/` (generated with `--design`) |
 | Presentation file | `decks/<slug>/<slug>.html` (generated with `-o`) |
 
@@ -61,7 +62,10 @@ Read its `FORMAT.md` before writing the first slide of a session.
    classroom-friendly decks; `fair-test-gentle` and `gentleman-cute` for Gentle
    decks) and, when none fits, propose one or two more for this topic and audience: write each as `decks/<slug>/themes/<name>.css`
    following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
-   until it prints `ok`. Keep the existing themes as options.
+   until it prints `ok`. Keep the existing themes as options; the studio also
+   lists the user's own themes from the user themes directory. When the user
+   wants to reuse a proposed theme in other decks, copy it into the user themes
+   directory (create it if needed) only after they confirm the destination.
 4. **Open the studio.** Start it in the background and watch its output:
    `node <decks-repo>/bin/decks.js studio decks/<slug>` prints
    `studio: http://127.0.0.1:<port>/<token>/`, then one `request <id> <kind> <slide>`

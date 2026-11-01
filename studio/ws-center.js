@@ -19,6 +19,9 @@ import {
   writtenSlides,
 } from "./studio.js";
 
+// Theme card labels by source: deck-local proposals, the user's own themes, bundled templates.
+const THEME_SOURCE_LABEL = { deck: "propuesto", user: "mío", repo: "plantilla" };
+
 const MODES = [
   ["view", "Ver"],
   ["comment", "Comentar"],
@@ -158,7 +161,7 @@ function themeCards() {
     });
     card.append(
       shots,
-      el("div", { className: "name" }, el("span", { textContent: theme.name }), el("small", { textContent: theme.source === "deck" ? "propuesto" : "plantilla" })),
+      el("div", { className: "name" }, el("span", { textContent: theme.name }), el("small", { textContent: THEME_SOURCE_LABEL[theme.source] ?? "plantilla" })),
     );
     card.addEventListener("click", () => chooseTheme(theme.name));
     wrap.append(card);

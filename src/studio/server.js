@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTAINER_NAMES } from "../render.js";
 import { validatePlan } from "../plan.js";
-import { listThemes } from "../theme.js";
+import { listThemes, userThemesDir } from "../theme.js";
 import { artboardHtml, presentHtml } from "./build.js";
 import { editSlideText } from "./edit.js";
 import {
@@ -83,18 +83,24 @@ const newRequestId = () => crypto.randomBytes(6).toString("hex");
 // File fingerprints used to decide whether to report a change; the rev is only computed on a change.
 const PRESENT_CSP = "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:";
 
-// sha256 over deck-local theme names and contents, so the UI repaints on theme-only edits (F2).
+// Theme dirs the studio watches: the deck's own, then the user's (see FORMAT.md, "Themes").
+const watchedThemeDirs = (paths) => [paths.themes, userThemesDir()];
+
+// sha256 over deck and user theme names and contents, so the UI repaints on theme-only edits (F2).
 function themesRev(paths) {
   const hash = crypto.createHash("sha256");
-  try {
-    for (const name of fs.readdirSync(paths.themes).sort()) {
-      if (!name.endsWith(".css")) continue;
-      hash.update(`${name}\0`);
-      hash.update(fs.readFileSync(path.join(paths.themes, name)));
-      hash.update("\0");
+  for (const [k, dir] of watchedThemeDirs(paths).entries()) {
+    hash.update(`${k}\0`);
+    try {
+      for (const name of fs.readdirSync(dir).sort()) {
+        if (!name.endsWith(".css")) continue;
+        hash.update(`${name}\0`);
+        hash.update(fs.readFileSync(path.join(dir, name)));
+        hash.update("\0");
+      }
+    } catch {
+      // no themes in this dir
     }
-  } catch {
-    // no deck themes
   }
   return hash.digest("hex");
 }
@@ -109,14 +115,17 @@ function fingerprint(paths) {
       parts.push("-");
     }
   }
-  try {
-    for (const name of fs.readdirSync(paths.themes).sort()) {
-      try {
-        const stat = fs.statSync(path.join(paths.themes, name));
-        parts.push(`${name}:${stat.size}:${stat.mtimeMs}`);
-      } catch {}
-    }
-  } catch {}
+  for (const [k, dir] of watchedThemeDirs(paths).entries()) {
+    parts.push(`#${k}`);
+    try {
+      for (const name of fs.readdirSync(dir).sort()) {
+        try {
+          const stat = fs.statSync(path.join(dir, name));
+          parts.push(`${name}:${stat.size}:${stat.mtimeMs}`);
+        } catch {}
+      }
+    } catch {}
+  }
   return parts.join("|");
 }
 

@@ -138,9 +138,17 @@ single-line; points must not start with `---` or `:::`.
 `themes/CONTRACT.md` lists the selectors every theme must style.
 `decks theme check <name|path.css>` prints `ok: <name>` or the missing selectors.
 Bundled themes: `gentleman-cute`, `fair-test`, `fair-test-gentle`.
-A deck's `theme:` is looked up in `<deck dir>/themes/<name>.css` first, then in
-the repository `themes/`; a missing theme fails the build with
-`build failed: theme not found: <name>`.
+A deck's `theme:` is looked up in three places, and the first match wins:
+
+1. `<deck dir>/themes/<name>.css`: themes proposed for that deck.
+2. The user themes directory: `$GENTLE_DECKS_THEMES` when set, else
+   `$XDG_CONFIG_HOME/gentle-decks/themes`, else `~/.config/gentle-decks/themes`.
+   Themes kept here work in every deck and survive package updates.
+3. The bundled `themes/`.
+
+A missing theme fails the build with `build failed: theme not found: <name>`.
+`decks theme check <name>` resolves a name in the user themes directory, then
+in the bundled `themes/`.
 
 ## Deck directory and studio
 

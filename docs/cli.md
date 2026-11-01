@@ -12,7 +12,7 @@ studio. From a checkout, run it as `node bin/decks.js`; from an npm install, as
 | `decks <deck.md> --design <dir>` | Write one 1600×900 artboard per slide for the gentle-design canvas |
 | `decks plan check <plan.json>` | Validate an outline; prints `ok: N slides` |
 | `decks plan scaffold <plan.json> -o <deck.md>` | Create a draft deck from the outline |
-| `decks theme check <name-or-file.css>` | Check a theme against the theme contract |
+| `decks theme check <name-or-file.css>` | Check a theme against the theme contract; a name is looked up in the user themes directory, then the bundled `themes/` |
 | `decks studio <deck-dir>` | Start the studio (see [studio.md](studio.md)) |
 | `decks studio requests <deck-dir>` | Print the open studio requests as JSON |
 | `decks studio reply <deck-dir> <id> <text>` | Answer a request in its comment thread |

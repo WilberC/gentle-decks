@@ -9,15 +9,18 @@ import path from "node:path";
 import { scaffoldDeck } from "../src/plan.js";
 
 const CLI = path.resolve("bin/decks.js");
-const run = (...args) => {
-  const r = spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8" });
-  return { code: r.status, stdout: r.stdout, stderr: r.stderr };
-};
 const scratch = [];
 const tmp = () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "decks-studio-"));
   scratch.push(dir);
   return dir;
+};
+// An empty user themes dir, so themes in the developer's ~/.config never leak into the checks.
+const NO_USER_THEMES = tmp();
+const ENV = { ...process.env, GENTLE_DECKS_THEMES: NO_USER_THEMES };
+const run = (...args) => {
+  const r = spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8", env: ENV });
+  return { code: r.status, stdout: r.stdout, stderr: r.stderr };
 };
 
 // Every deck dir lives outside the worktree and is removed when the file is done.
@@ -74,9 +77,10 @@ function stopStudio(studio) {
 }
 
 // Starts `decks studio <dir> --port 0` and resolves on the printed URL line.
-function startStudio(dir) {
+function startStudio(dir, env = ENV) {
   const child = spawn(process.execPath, [CLI, "studio", dir, "--port", "0"], {
     stdio: ["ignore", "pipe", "pipe"],
+    env,
   });
   let stdout = "";
   let stderr = "";
@@ -962,4 +966,34 @@ test("failed text edits leave the deck byte-identical (S10)", async (t) => {
     assert.notEqual(r.status, 200, JSON.stringify(body));
     assert.deepEqual(fs.readFileSync(deckFile(dir)), before);
   }
+});
+
+test("the studio lists user themes between deck and bundled themes and repaints on their edits", async (t) => {
+  const userDir = tmp();
+  fs.writeFileSync(path.join(userDir, "mine.css"), "/* user theme */\n");
+  fs.writeFileSync(path.join(userDir, "studio.css"), "/* shadowed by the deck */\n");
+  const dir = makeDeck({ deck: ONE_SLIDE, themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir, { ...process.env, GENTLE_DECKS_THEMES: userDir });
+  t.after(() => stopStudio(studio));
+
+  const state = await call(studio, "api/state");
+  assert.deepEqual(sortedThemes(state.body.themes), [
+    ["studio", "deck"],
+    ["mine", "user"],
+    ["fair-test", "repo"],
+    ["fair-test-gentle", "repo"],
+    ["gentleman-cute", "repo"],
+  ]);
+
+  const res = await fetch(studio.base + "api/events");
+  const reader = res.body.getReader();
+  t.after(() => reader.cancel().catch(() => {}));
+  setTimeout(() => fs.writeFileSync(path.join(userDir, "mine.css"), "/* user theme, edited */\n"), 100);
+  let text = "";
+  const end = Date.now() + 4000;
+  while (Date.now() < end && !text.includes("event: change")) {
+    const { value } = await reader.read();
+    text += new TextDecoder().decode(value);
+  }
+  assert.ok(text.includes("event: change"), "a user theme edit did not reach api/events");
 });
