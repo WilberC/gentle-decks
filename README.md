@@ -17,11 +17,14 @@ with no external requests.
 
 ```bash
 # Gentle Shell
-gentle-shell install git:github.com/WilberC/gentle-decks
+gentle-shell install npm:gentle-decks
 
 # Pi
-pi install git:github.com/WilberC/gentle-decks
+pi install npm:gentle-decks
 ```
+
+To try unreleased changes from `main`, install from Git instead:
+`pi install git:github.com/WilberC/gentle-decks`.
 
 Restart the session (or `/reload`) and ask: *"Make a presentation about …"*.
 Requires Node.js 18 or later.
