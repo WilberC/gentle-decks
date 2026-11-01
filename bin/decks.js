@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../src/parse.js";
 import { renderDeck } from "../src/render.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
@@ -20,7 +21,7 @@ const USAGE = [
   "       decks studio resolve <deck-dir> <id...> [--reply <text>]",
 ].join("\n");
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 
 function usage() {

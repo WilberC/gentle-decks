@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { CONTAINER_NAMES } from "../render.js";
 import { validatePlan } from "../plan.js";
 import { listThemes } from "../theme.js";
@@ -31,7 +32,7 @@ const SLIDE_ROUTE = /^slides\/([a-z][a-z0-9-]*)\.html$/;
 const TEXT_ROUTE = /^api\/slides\/([a-z][a-z0-9-]*)\/text$/;
 const ASSET = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const STUDIO_DIR = path.join(ROOT, "studio");
 
 const MIME = {

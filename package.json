@@ -1,11 +1,38 @@
 {
   "name": "gentle-decks",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Markdown decks that render to self-contained HTML presentations.",
+  "keywords": [
+    "pi-package",
+    "gentle-shell",
+    "presentation",
+    "slides",
+    "markdown"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WilberC/gentle-decks.git"
+  },
   "bin": {
     "decks": "./bin/decks.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "studio",
+    "themes",
+    "skill",
+    "FORMAT.md",
+    "README.md"
+  ],
+  "pi": {
+    "skills": [
+      "./skill"
+    ]
+  },
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build:sample": "node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html",

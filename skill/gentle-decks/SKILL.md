@@ -37,7 +37,10 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
 | Canvas preview (optional) | `design/<slug>/` (generated with `--design`) |
 | Presentation file | `decks/<slug>/<slug>.html` (generated with `-o`) |
 
-`<decks-repo>` is the gentle-decks checkout (currently `~/Projects/Personal/gentle-decks`).
+`<decks-repo>` is the gentle-decks package root: the directory two levels above
+this skill's folder (`<skill dir>/../..`), which holds `bin/decks.js` and `FORMAT.md`.
+Resolve it to an absolute path once per session and use that path in every command;
+it works the same for an npm, git, or local install and for a source checkout.
 Read its `FORMAT.md` before writing the first slide of a session.
 
 ## Flow

@@ -9,6 +9,26 @@ Extracted from hand-authored gist decks; intended to become a gentle-shell
 skill (agent writes content, renderer handles mechanics, gentle-design canvas
 shows the result).
 
+## Install
+
+gentle-decks is a Pi package: installing it adds the `gentle-decks` skill to
+the agent, and the skill runs the bundled renderer and studio.
+
+```bash
+# Gentle Shell
+gentle-shell install git:github.com/WilberC/gentle-decks
+
+# Pi
+pi install git:github.com/WilberC/gentle-decks
+```
+
+Restart the session (or `/reload`), then ask for a presentation. Requires
+Node.js 18 or later. The optional canvas preview uses the `gentle_design` tool
+from Gentle Shell; in plain Pi the renderer and the studio work the same.
+
+To try a local checkout without installing it, run `npm install` and then
+`pi -e ./` from the repository root.
+
 ## Usage
 
 ```bash
@@ -73,7 +93,7 @@ A deck may ship its own themes in `decks/<slug>/themes/`. Bundled deck themes:
 [`skill/gentle-decks/SKILL.md`](skill/gentle-decks/SKILL.md) is the
 Gamma-style flow for gentle-shell: brief → outline approval → markdown →
 canvas preview → apply canvas comments to the slide's markdown → final HTML.
-It lives here until it ships in the Pi plugin.
+It ships with the package (see Install).
 
 Open the generated HTML in a browser: arrows/swipe/click to navigate,
 `F` fullscreen, `P` exports one slide per page to PDF.

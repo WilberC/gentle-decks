@@ -1,6 +1,7 @@
 // Renders what the studio serves: one static slide artboard (S8) and the full navigable deck (S12).
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../parse.js";
 import { renderDesign, SLIDES_DIR } from "../design.js";
 import { renderDeck } from "../render.js";
@@ -8,7 +9,7 @@ import { scaffoldDeck } from "../plan.js";
 import { findTheme } from "../theme.js";
 import { readDeck } from "./state.js";
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const NAV_JS = fs.readFileSync(path.join(ROOT, "src", "deck-nav.js"), "utf8");
 const DEFAULT_THEME = "gentleman-cute";
 

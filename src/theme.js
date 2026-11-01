@@ -2,6 +2,7 @@
 // See themes/CONTRACT.md and FORMAT.md.
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const THEME_SELECTORS = [
   // deck frame
@@ -27,7 +28,7 @@ export function missingSelectors(css) {
   return THEME_SELECTORS.filter((sel) => !new RegExp(`${escapeRe(sel)}(?![\\w-])`).test(code));
 }
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const REPO_THEMES_DIR = path.join(ROOT, "themes");
 
 // Theme names in a themes directory, sorted so listings are deterministic.
