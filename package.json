@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Markdown decks that render to self-contained HTML presentations.",
+  "license": "MIT",
   "keywords": [
     "pi-package",
     "gentle-shell",
@@ -24,7 +25,8 @@
     "themes",
     "skill",
     "FORMAT.md",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "pi": {
     "skills": [

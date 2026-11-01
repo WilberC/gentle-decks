@@ -1,7 +1,7 @@
 ---
 name: gentle-decks
 description: "Trigger: make a presentation, slides, deck, talk, pitch, Gamma-style deck, presentación, diapositivas. Write a markdown deck, render it with gentle-decks, preview each slide on the gentle-design canvas, and apply canvas comments slide by slide."
-license: Apache-2.0
+license: MIT
 metadata:
   author: wilber
   version: "0.1"

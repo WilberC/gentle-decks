@@ -124,5 +124,9 @@ produces a silently broken deck.
 | `themes/` | Deck themes (one CSS file each) |
 | `decks/sample/` | Sample deck used as the format fixture |
 | `checks/` | Structural verification and `node:test` suites |
-| `skill/gentle-decks/` | Agent skill (not installed yet) |
+| `skill/gentle-decks/` | Agent skill, loaded when the package is installed |
 | `odd/tasks/` | Feature specs and task log |
+
+## License
+
+MIT. See [LICENSE](LICENSE).
