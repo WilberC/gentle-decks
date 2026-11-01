@@ -1,11 +1,8 @@
 {
   "title": "Deck studio — unified workspace (Gentle / Flat)",
-  "brief": "One workspace for the whole flow: the outline from 01 always on the left (rows gain thumbnail and status), the selected slide in the center with View / Comment / Edit, comments and agent replies on the right. Gentle brand by default, Flat switch in every screen.",
+  "brief": "One workspace for the whole flow: the outline always on the left (rows gain thumbnail and status), the selected slide in the center with View / Comment / Edit, comments and agent replies on the right. Gentle brand by default, Flat switch in every screen.",
   "artboards": [
     { "file": "04-workspace-plan.html", "title": "Workspace · armando la estructura", "tradeoff": "Before generating: outline editable on the left, look & feel previews in the center, slide comments on the right. Everything on one screen, so the center is narrower than a dedicated plan page", "width": 1440, "height": 900 },
-    { "file": "05-workspace-edit.html", "title": "Workspace · generando y editando", "tradeoff": "During/after generation: the same outline now shows live thumbnails and status; the center edits the selected slide (inline edit, pinned comments, overflow); the agent answers in the comment thread. Dense, but nothing is lost when switching tasks", "width": 1440, "height": 900 },
-    { "file": "01-shell-native.html", "title": "Earlier · Shell native plan", "tradeoff": "Previous direction kept for reference: the outline style the user liked", "width": 1440, "height": 900 },
-    { "file": "02-workbench.html", "title": "Earlier · Workbench editor", "tradeoff": "Previous direction kept for reference: editor and grid ideas folded into 05", "width": 1440, "height": 900 },
-    { "file": "03-command-grid.html", "title": "Earlier · Command grid", "tradeoff": "Previous direction kept for reference: the full grid stays available as the Grid view inside the workspace", "width": 1440, "height": 900 }
+    { "file": "05-workspace-edit.html", "title": "Workspace · generando y editando", "tradeoff": "During/after generation: the same outline now shows live thumbnails and status; the center edits the selected slide (inline edit, pinned comments, overflow); the agent answers in the comment thread. Dense, but nothing is lost when switching tasks", "width": 1440, "height": 900 }
   ]
 }
