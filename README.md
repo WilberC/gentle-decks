@@ -2,14 +2,10 @@
 
 **Ask your agent for a presentation. Get one HTML file you can present anywhere.**
 
-gentle-decks is a [Gentle Shell](https://github.com/Gentleman-Programming/gentle-shell)
-and [Pi](https://pi.dev) package. The agent writes the slides in markdown; the
-renderer handles layout, theme and navigation, and produces one self-contained
-HTML file with no external requests.
-
-<a href="https://github.com/Gentleman-Programming/gentle-ai">
-  <img width="220" src="https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/docs/assets/brand/built-with-gentle-ai.png" alt="Built with Gentle-AI" />
-</a>
+Works in [Gentle Shell](https://github.com/Gentleman-Programming/gentle-shell)
+and [Pi](https://pi.dev). The agent writes the slides in markdown; the renderer
+handles layout, theme and navigation, and produces one self-contained HTML file
+with no external requests.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/WilberC/gentle-decks/main/docs/images/studio-grid.png" alt="The studio: outline on the left, live slide grid in the center, comments on the right" width="100%" />
@@ -70,3 +66,7 @@ renderer and the studio work the same.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+<a href="https://github.com/Gentleman-Programming/gentle-ai">
+  <img width="220" src="https://raw.githubusercontent.com/Gentleman-Programming/gentle-ai/main/docs/assets/brand/built-with-gentle-ai.png" alt="Built with Gentle-AI" />
+</a>
