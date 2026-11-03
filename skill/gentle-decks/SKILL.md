@@ -98,6 +98,28 @@ Read its `FORMAT.md` before writing the first slide of a session.
    `approve` request (the **✓ Aprobar y cerrar** button), deliver the final file, resolve
    the request, and stop the studio: `node <decks-repo>/bin/decks.js studio stop decks/<slug>`.
 
+## Delegation (keep the orchestrator thin)
+
+The orchestrating agent owns the conversation, the studio lifecycle, and
+acceptance. Heavy production work goes to subagent workers so the main
+context stays small (S16):
+
+- **Generate (step 5):** delegate the slide writing in sequential batches of
+  3–5 slides. Give each worker the deck file path, the exact plan entries
+  (`id`, `title`, `points`, `notes`, `layout`) for its batch, the
+  `FORMAT.md` path, and the visual rule; the worker writes its slides to the
+  markdown and saves. Batches run in order (never in parallel: one shared
+  file), so the studio grid still fills live between batches. The
+  orchestrator reads the result, rebuilds with `-o` once at the end, and
+  fixes any `build failed` line itself or with a follow-up worker.
+- **Refine (step 6):** when several requests queue up, delegate their
+  application to one worker: pass the open-requests JSON (`studio requests`),
+  the relevant slide excerpts, and `FORMAT.md`; the worker edits, rebuilds to
+  verify, and resolves each id with `studio resolve … --reply`. The
+  orchestrator reads the worker's summary and reports to the user.
+- **Never delegate:** the brief, the questionnaire, chat replies, theme
+  selection with the user, and the final delivery decision.
+
 ## Studio requests
 
 The studio queues user actions in `decks/<slug>/requests.json`.
