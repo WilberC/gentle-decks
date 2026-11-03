@@ -204,10 +204,16 @@ try {
   const pick = requests().find((r) => r.text === "Título más corto");
   check("editor comment carries selector and excerpt", !!pick && !!pick.selector, pick ? `${pick.selector} | ${pick.excerpt}` : "missing");
 
-  // Layout switch.
+  // Layout switch: the select must confirm before firing (S4); cancelling sends nothing.
+  const layoutBefore = requests().filter((r) => r.kind === "layout").length;
   await setValue("#layout-select", "steps", "change");
+  await js(`document.getElementById("dialog").close(""); true`);
+  await sleep(400);
+  check("layout select fires nothing when cancelled", requests().filter((r) => r.kind === "layout").length === layoutBefore);
+  await setValue("#layout-select", "steps", "change");
+  await answerDialog("");
   await sleep(800);
-  check("layout select posts a layout request", requests().some((r) => r.kind === "layout" && r.layout === "steps"));
+  check("layout select posts a layout request after confirming", requests().some((r) => r.kind === "layout" && r.layout === "steps"));
 
   // Comments column lists open requests, with the reply column available.
   await click('#comments .tabs [data-tab="all"]');

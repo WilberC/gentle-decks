@@ -88,7 +88,7 @@ function setMode(mode) {
 }
 
 function layoutSelect(slide) {
-  const select = el("select", { id: "layout-select", ariaLabel: "Cambiar layout" });
+  const select = el("select", { id: "layout-select", ariaLabel: "Pedir al agente que reescriba la diapositiva con otro layout" });
   if (!slide?.layout) select.append(new Option("layout: —", ""));
   for (const name of LAYOUTS) select.append(new Option(`layout: ${name}`, name));
   select.value = slide?.layout ?? "";
@@ -96,8 +96,19 @@ function layoutSelect(slide) {
   select.addEventListener("change", async () => {
     const value = select.value;
     select.value = slide?.layout ?? "";
-    if (!value) return;
-    await postRequest({ kind: "layout", slideId: slide.id, layout: value }, `Pedí al agente que rehaga esta diapositiva como ${value}.`);
+    if (!value || !slide) return;
+    // S4: the select never fires on its own; the dialog states exactly what the agent will do.
+    const extra = await ask({
+      title: `Reescribir como ${value}`,
+      hint: `El agente reescribirá "${slide.title}" con el layout ${value} conservando su contenido. Podés agregar instrucciones (opcional).`,
+      ok: "Pedir reescritura",
+      required: false,
+    });
+    if (extra === null) return;
+    await postRequest(
+      { kind: "layout", slideId: slide.id, layout: value, ...(extra ? { text: extra } : {}) },
+      `Pedí al agente que reescriba la diapositiva como ${value}.`,
+    );
   });
   return select;
 }

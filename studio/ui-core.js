@@ -130,8 +130,9 @@ export function notify(text, tone = "info") {
   setTimeout(() => item.remove(), tone === "error" ? 9000 : 5000);
 }
 
-// Resolves to the typed text, "" for confirm-only dialogs, or null when cancelled.
-export function ask({ title, hint = "", value = "", ok = "Enviar", text = true }) {
+// Resolves to the typed text, "" for confirm-only dialogs or optional text confirmed empty,
+// or null when cancelled.
+export function ask({ title, hint = "", value = "", ok = "Enviar", text = true, required = true }) {
   const dialog = document.getElementById("dialog");
   const area = document.getElementById("dialog-text");
   document.getElementById("dialog-title").textContent = title;
@@ -149,7 +150,8 @@ export function ask({ title, hint = "", value = "", ok = "Enviar", text = true }
         if (dialog.returnValue !== "ok") return resolve(null);
         if (!text) return resolve("");
         const v = area.value.trim();
-        resolve(v ? v : null);
+        if (v) return resolve(v);
+        resolve(required ? null : "");
       },
       { once: true },
     );
