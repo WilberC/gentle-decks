@@ -559,6 +559,74 @@ test("POST api/requests validates, appends, prints a line, and dedupes overflow 
   assert.equal(reopened.body.ignored, undefined);
 });
 
+test("POST api/requests accepts propose-style and validates its mode and theme (S10, S11)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+
+  // S10: a brand-new theme for this deck, with optional instructions from the user.
+  const fresh = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new", text: "Cold lab colors" });
+  assert.equal(fresh.status, 200);
+  assert.deepEqual(
+    {
+      kind: fresh.body.request.kind,
+      mode: fresh.body.request.mode,
+      theme: fresh.body.request.theme,
+      text: fresh.body.request.text,
+      status: fresh.body.request.status,
+    },
+    { kind: "propose-style", mode: "new", theme: undefined, text: "Cold lab colors", status: "open" },
+  );
+  await waitFor(
+    () => studio.stdout().includes(`request ${fresh.body.request.id} propose-style -\n`),
+    4000,
+    "propose-style stdout line",
+  );
+
+  // `mode` defaults to "new", so the button works without sending it.
+  const implicit = await send(studio, "POST", "api/requests", { kind: "propose-style" });
+  assert.equal(implicit.status, 200);
+  assert.equal(implicit.body.request.mode, "new");
+
+  // S11: theme-level requests name the theme they target.
+  const improve = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "improve", theme: "studio" });
+  assert.equal(improve.status, 200);
+  assert.equal(improve.body.request.theme, "studio");
+  assert.equal(improve.body.request.mode, "improve");
+  const comment = await send(studio, "POST", "api/requests", {
+    kind: "propose-style",
+    mode: "comment",
+    theme: "studio",
+    text: "More contrast on the title",
+  });
+  assert.equal(comment.status, 200);
+  assert.equal(comment.body.request.text, "More contrast on the title");
+
+  const before = fs.readFileSync(file);
+  const invalid = [
+    [{ kind: "propose-style", mode: "nope" }, /^\$\.mode: /],
+    [{ kind: "propose-style", mode: "improve" }, /^\$\.theme: /],
+    [{ kind: "propose-style", mode: "comment", theme: "studio" }, /^\$\.text: /],
+    [{ kind: "propose-style", mode: "improve", theme: "two words" }, /^\$\.theme: /],
+    [{ kind: "propose-style", mode: "improve", theme: "../etc/passwd" }, /^\$\.theme: /],
+    [{ kind: "propose-style", text: "" }, /^\$\.text: /],
+  ];
+  for (const [payload, problem] of invalid) {
+    const res = await send(studio, "POST", "api/requests", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.equal(res.body.error, "invalid");
+    assert.ok(
+      res.body.problems.some((p) => problem.test(p)),
+      `${JSON.stringify(payload)} -> ${JSON.stringify(res.body.problems)}`,
+    );
+  }
+  // The invalid payloads wrote nothing; the valid ones were appended in order.
+  const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.deepEqual(doc.requests.map((r) => r.mode), ["new", "new", "improve", "comment"]);
+  assert.ok(before.length > 0);
+});
+
 test("studio requests and resolve CLI read and update requests.json (S9)", async (t) => {
   const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
   const studio = await startStudio(dir);

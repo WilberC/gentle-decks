@@ -23,6 +23,7 @@ export const app = {
   chosenView: false, // the user picked a view; stop defaulting
   mode: "view", // slide mode: "view" | "comment" | "edit"
   current: null, // selected slide id
+  theme: null, // S11: theme name whose detail is open in the Estilo stage
   tab: "this", // comments tab: "this" | "all" | "agent"
   overflow: new Map(), // slide id -> boolean (gd:ready overflow)
   heights: new Map(), // slide id -> scrollHeight reported by gd:ready

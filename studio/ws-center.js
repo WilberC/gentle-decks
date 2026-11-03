@@ -3,6 +3,7 @@ import {
   app,
   api,
   ask,
+  centerEls,
   el,
   loadState,
   notify,
@@ -21,6 +22,17 @@ import {
 
 // Theme card labels by source: deck-local proposals, the user's own themes, bundled templates.
 const THEME_SOURCE_LABEL = { deck: "propuesto", user: "mío", repo: "plantilla" };
+
+// S11: the components the theme contract requires, listed as a text-only legend under the preview.
+const THEME_COMPONENTS = [
+  ["card", "tarjeta con un bloque de contenido"],
+  ["step", "paso numerado de una secuencia"],
+  ["bars", "barras que comparan valores"],
+  ["stat", "cifra destacada con su etiqueta"],
+  ["term", "término con su definición"],
+  ["pills", "etiquetas cortas en fila"],
+  ["figure", "imagen con su leyenda"],
+];
 
 const MODES = [
   ["view", "Ver"],
@@ -60,6 +72,8 @@ function renderTools(tools) {
   tools.replaceChildren();
   tools.append(
     segment("Vista", "view", [["style", "Estilo"], ["wire", "Boceto"], ["slide", "Slide"], ["grid", "Grid"]], app.view, (view) => {
+      // S11: picking Estilo returns to the card list, never to a theme opened earlier.
+      if (view === "style") app.theme = null;
       setView(view);
       tools.querySelector(`[data-view="${view}"]`)?.focus();
     }),
@@ -161,11 +175,22 @@ function empty(text) {
 
 function renderStyle(stage) {
   const plan = app.state.plan;
+  // S11: the detail is a stage inside Estilo, so the outline, the hash and the comments stay put.
+  const opened = (app.state.themes ?? []).find((theme) => theme.name === app.theme);
+  if (opened) return renderThemeDetail(stage, opened);
+  app.theme = null;
+  const propose = el("button", { type: "button", className: "btn propose", id: "propose-style", textContent: "✦ Proponer estilo" });
+  propose.title = "Pedir al agente un estilo nuevo para este deck";
+  propose.addEventListener("click", onProposeStyle);
   const look = el(
     "section",
     { className: "look" },
-    el("h2", { textContent: "Elige el estilo" }),
-    el("p", { className: "muted", textContent: "Pide al agente en el chat que proponga más estilos; aparecen aquí como “propuesto”." }),
+    el("div", { className: "look-head" }, el("h2", { textContent: "Elige el estilo" }), propose),
+    el("p", {
+      className: "muted",
+      textContent:
+        "Clic en un estilo para verlo en grande, comentarlo o mejorarlo; “✦ Proponer estilo” pide uno nuevo al agente.",
+    }),
     themeCards(),
   );
   const n = plan.slides.length;
@@ -181,6 +206,103 @@ function renderStyle(stage) {
     ),
   );
   stage.append(look);
+}
+
+// S10: the button states what the agent will do before firing, and the instructions are optional.
+async function onProposeStyle() {
+  const extra = await ask({
+    title: "Proponer un estilo",
+    hint: "El agente propondrá un estilo nuevo para este deck y lo guardará en themes/ del deck. Podés describir el look que buscás (opcional).",
+    ok: "Pedir estilo",
+    required: false,
+  });
+  if (extra === null) return;
+  await postRequest(
+    { kind: "propose-style", mode: "new", ...(extra ? { text: extra } : {}) },
+    "Pedí al agente que proponga un estilo nuevo.",
+  );
+}
+
+// S11: a theme gets a detail stage: big preview, the component contract, and its own actions.
+function renderThemeDetail(stage, theme) {
+  const chosen = app.state.plan?.theme === theme.name;
+  const back = el("button", { type: "button", className: "btn", id: "theme-back", textContent: "← Volver a los estilos" });
+  back.addEventListener("click", () => {
+    app.theme = null;
+    renderCenter(centerEls());
+  });
+  const head = el(
+    "header",
+    { className: "head" },
+    el("h2", { textContent: theme.name }),
+    el("small", { textContent: THEME_SOURCE_LABEL[theme.source] ?? "plantilla" }),
+  );
+  if (chosen) head.append(el("span", { className: "tag", textContent: "elegido" }));
+  head.append(back);
+
+  // The deck's first slides, rendered with this theme: the same artboards, one ?theme away.
+  const preview = el("div", { className: "preview" });
+  const sample = app.state.plan.slides.slice(0, 2);
+  if (!sample.length) {
+    preview.append(el("p", { className: "muted", textContent: "El esquema está vacío: agrega diapositivas para verlas con este estilo." }));
+  }
+  sample.forEach((slide) => preview.append(slideFrame(slide.id, { theme: theme.name, preview: true, title: `${theme.name}: ${slide.title}` })));
+
+  // S11: the components the theme must style, as a compact text legend (no iframes).
+  const components = el("ul", { className: "components", ariaLabel: "Componentes que este estilo debe vestir" });
+  for (const [name, what] of THEME_COMPONENTS) {
+    components.append(el("li", {}, el("code", { textContent: name }), el("span", { textContent: what })));
+  }
+
+  const choose = el("button", { type: "button", className: "btn primary", id: "theme-choose", textContent: "Elegir este estilo" });
+  choose.addEventListener("click", () => chooseTheme(theme.name));
+  const comment = el("button", { type: "button", className: "btn", id: "theme-comment", textContent: "Comentar este estilo" });
+  comment.addEventListener("click", () => onThemeComment(theme));
+  const improve = el("button", { type: "button", className: "btn", id: "theme-improve", textContent: "Mejorar este estilo" });
+  improve.addEventListener("click", () => onThemeImprove(theme));
+
+  stage.append(
+    el(
+      "section",
+      { className: "theme-detail" },
+      head,
+      preview,
+      el("h3", { textContent: "Componentes que viste el estilo" }),
+      components,
+      el("div", { className: "acts" }, choose, comment, improve),
+      el("p", {
+        className: "muted note",
+        textContent: "Comentar y mejorar piden al agente que edite el CSS de este estilo; el estilo elegido se sigue aplicando a todo el deck.",
+      }),
+    ),
+  );
+}
+
+async function onThemeComment(theme) {
+  const text = await ask({
+    title: `Comentar el estilo ${theme.name}`,
+    hint: "¿Qué querés cambiar o revisar de este estilo? El agente lo edita y te responde.",
+    ok: "Pedir cambio",
+  });
+  if (!text) return;
+  await postRequest(
+    { kind: "propose-style", mode: "comment", theme: theme.name, text },
+    `Pedí al agente que revise el estilo ${theme.name}.`,
+  );
+}
+
+async function onThemeImprove(theme) {
+  const extra = await ask({
+    title: `Mejorar ${theme.name}`,
+    hint: "El agente ajustará este estilo siguiendo tus indicaciones. Podés dejarlo vacío y propondrá las mejoras por su cuenta.",
+    ok: "Pedir mejora",
+    required: false,
+  });
+  if (extra === null) return;
+  await postRequest(
+    { kind: "propose-style", mode: "improve", theme: theme.name, ...(extra ? { text: extra } : {}) },
+    `Pedí al agente que mejore el estilo ${theme.name}.`,
+  );
 }
 
 function themeCards() {
@@ -202,7 +324,11 @@ function themeCards() {
       shots,
       el("div", { className: "name" }, el("span", { textContent: theme.name }), el("small", { textContent: THEME_SOURCE_LABEL[theme.source] ?? "plantilla" })),
     );
-    card.addEventListener("click", () => chooseTheme(theme.name));
+    card.addEventListener("click", () => {
+      // S11: the card opens the theme detail instead of silently choosing.
+      app.theme = theme.name;
+      renderCenter(centerEls());
+    });
     wrap.append(card);
   }
   if (!app.state.themes?.length) wrap.append(el("p", { className: "muted", textContent: "No hay estilos disponibles." }));
@@ -213,6 +339,8 @@ async function chooseTheme(name) {
   app.state.plan.theme = name;
   if (!(await savePlan())) return;
   for (const card of document.querySelectorAll(".theme")) card.setAttribute("aria-pressed", String(card.dataset.theme === name));
+  // The detail shows whether this theme is the chosen one; rebuild it in place.
+  if (app.theme) renderCenter(centerEls());
 }
 
 async function onGenerate() {

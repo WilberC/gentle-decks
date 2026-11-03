@@ -36,6 +36,7 @@ function ago(iso) {
 
 // `h2 · "excerpt"` when the request names an element, else the kind (S7).
 function target(r) {
+  if (r.kind === "propose-style") return `estilo · ${r.theme ?? "nuevo"}${r.mode === "comment" ? " · comentario" : r.mode === "improve" ? " · mejora" : ""}`;
   if (r.excerpt) {
     const last = String(r.selector ?? "").split(" > ").pop() ?? "";
     const tag = last.replace(/:nth-of-type\(\d+\)/, "").replace(/^#/, "") || "elemento";

@@ -188,18 +188,65 @@ try {
   const planComment = requests().find((r) => r.kind === "comment" && r.text === "Hazlo más visual");
   check("plan comment posts a request", !!planComment, planComment ? planComment.slideId : "missing");
 
-  // Theme selection (any other theme than the current one); row selects opened Boceto, so
-  // go back to Estilo first.
+  // Back to Estilo (the row selects above left the center in Boceto).
   await click('#tools [data-view="style"]');
   await until(`!!document.querySelector(".theme")`, "theme cards visible again");
+
+  // S10: the Estilo view offers a clear way to ask the agent for a new theme.
+  const newThemeRequests = () => requests().filter((r) => r.kind === "propose-style" && r.mode === "new");
+  const proposeBefore = newThemeRequests().length;
+  await click("#propose-style");
+  await js(`document.getElementById("dialog").close(""); true`);
+  await sleep(400);
+  check("propose-style button sends nothing when cancelled (S10)", newThemeRequests().length === proposeBefore);
+  await click("#propose-style");
+  await answerDialog("Colores fríos de laboratorio, sin rosa");
+  await sleep(800);
+  const proposed = newThemeRequests()[0];
+  check(
+    "propose-style button asks the agent for a new theme (S10)",
+    !!proposed && proposed.text === "Colores fríos de laboratorio, sin rosa",
+    proposed ? `${proposed.mode} | ${proposed.text}` : "missing",
+  );
+
+  // S11: a card opens the theme detail: a big themed preview, the component legend, and the
+  // theme-level actions (choose / comment / improve).
   const otherTheme = await js(`(() => {
     const current = [...document.querySelectorAll(".theme")].find((t) => t.getAttribute("aria-pressed") === "true");
     const other = [...document.querySelectorAll(".theme")].find((t) => t !== current);
     return other ? other.dataset.theme : "";
   })()`);
   await click(`.theme[data-theme="${otherTheme}"]`);
+  await until(`!!document.querySelector(".theme-detail")`, "theme detail view");
+  const detail = await js(`(() => {
+    const box = document.querySelector(".theme-detail");
+    const frames = [...box.querySelectorAll(".preview .frame iframe")];
+    return {
+      frames: frames.length,
+      themed: frames.length > 0 && frames.every((f) => f.src.includes(${JSON.stringify(`theme=${otherTheme}`)})),
+      components: box.querySelectorAll(".components li code").length,
+    };
+  })()`);
+  check(
+    "theme detail shows a large themed preview and the component examples (S11)",
+    detail.frames >= 2 && detail.themed && detail.components === 7,
+    JSON.stringify(detail),
+  );
+  await click("#theme-comment");
+  await answerDialog("El título necesita más contraste");
+  await sleep(800);
+  const themedComment = requests().find((r) => r.kind === "propose-style" && r.mode === "comment");
+  check(
+    "theme comment posts a request for that theme (S11)",
+    !!themedComment && themedComment.theme === otherTheme && themedComment.text === "El título necesita más contraste",
+    themedComment ? `${themedComment.theme} | ${themedComment.text}` : "missing",
+  );
+  await click("#theme-choose");
   await sleep(700);
   check("theme click sets plan.theme", plan().theme === otherTheme, `${otherTheme} / ${plan().theme}`);
+  // The detail is a stage inside Estilo: go back so Generate stays reachable.
+  await click("#theme-back");
+  await until(`!!document.querySelector("#generate")`, "Estilo card list after the theme detail");
 
   // Generate.
   await click("#generate");

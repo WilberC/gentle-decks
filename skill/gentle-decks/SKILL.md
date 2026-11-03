@@ -116,6 +116,12 @@ Keep replies to one or two sentences in the user's language.
 | `layout` | Rewrite slide `slideId` with the container `layout`, keeping its content. |
 | `add-slide` | Add a slide after `slideId` about `text`, in `plan.json` and in the deck, with a new unique id. |
 | `overflow` | Slide `slideId` is taller than 1600×900: shorten it or split it into two slides. |
+| `propose-style` | Theme work, by `mode`: `new` proposes a theme for this deck (honor `text` as the look; there is no `theme` field); `improve` edits the CSS of `theme` following `text` (may be empty); `comment` answers the user's `text` about `theme`. Write the CSS to `decks/<slug>/themes/<name>.css`, follow `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css` until it prints `ok`. |
+
+A `propose-style` request has no slide, so it never appears in a slide thread:
+answer it with `studio reply` on its own id and resolve it once the CSS is written
+and checked. Never pick the new theme for the user either: the studio lists it as
+*propuesto* and the user chooses it.
 
 Text edits made in the studio's Edit mode are already written to the deck; do
 not undo them. Resolve each request only after the change is saved; leave a

@@ -170,9 +170,15 @@ export const replyProblem = (text) =>
   typeof text !== "string" || text.trim() === "" || text.length > MAX_REPLY ? "invalid reply" : null;
 
 // The agent bridge (S9): requests describe work an agent should do, and stay open until resolved.
-export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow"];
+// S10/S11: `propose-style` carries theme work, so theme actions are not disguised as slide comments.
+export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style"];
 const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow"]);
 const TEXT_KINDS = new Set(["comment", "redo", "add-slide"]);
+// S10/S11: what a `propose-style` request asks for: a new theme, an improvement, or an answer.
+const THEME_MODES = ["new", "improve", "comment"];
+const THEME_KINDS = new Set(["propose-style"]);
+// A theme name is a CSS file stem in the deck's themes dir, never a path (S11).
+const THEME_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const isText = (value) => typeof value === "string";
 
 // Validates a POST api/requests body; returns `{ problems, fields }` with only known keys in `fields`.
@@ -193,6 +199,19 @@ export function validateRequest(input, layouts) {
   } else if (!isText(input.text) || input.text.trim() === "") {
     problems.push("$.text: must be a non-empty string");
   }
+  // S10/S11: a theme request says what to do (`mode`, default `new`) and, except for a brand-new
+  // theme, which theme it targets. Commenting on a theme is a request with text, like a comment.
+  const mode = input.mode ?? "new";
+  if (THEME_KINDS.has(kind)) {
+    if (!THEME_MODES.includes(mode)) problems.push(`$.mode: must be one of ${THEME_MODES.join(", ")}`);
+    if (mode !== "new" && input.theme === undefined) problems.push("$.theme: required");
+    if (mode === "comment" && input.text === undefined) problems.push("$.text: required");
+  } else if (input.mode !== undefined) {
+    problems.push(`$.mode: must be one of ${THEME_MODES.join(", ")}`);
+  }
+  if (input.theme !== undefined && (!isText(input.theme) || !THEME_NAME.test(input.theme))) {
+    problems.push(`$.theme: must match ${THEME_NAME.source}, got ${JSON.stringify(input.theme)}`);
+  }
   for (const key of ["selector", "excerpt"]) {
     if (input[key] !== undefined && !isText(input[key])) problems.push(`$.${key}: must be a string`);
   }
@@ -201,9 +220,10 @@ export function validateRequest(input, layouts) {
   }
   if (problems.length) return { problems };
   const fields = { kind };
-  for (const key of ["slideId", "text", "selector", "excerpt", "layout"]) {
+  for (const key of ["slideId", "text", "selector", "excerpt", "layout", "theme"]) {
     if (input[key] !== undefined) fields[key] = input[key];
   }
+  if (THEME_KINDS.has(kind)) fields.mode = mode;
   return { problems: [], fields };
 }
 
