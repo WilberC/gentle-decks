@@ -190,6 +190,7 @@ test("missing output target prints usage and exits 2", () => {
       "       decks plan scaffold <plan.json> -o <deck.md>\n" +
       "       decks theme check <name|path.css>\n" +
       "       decks studio <deck-dir> [--port N]\n" +
+      "       decks studio stop <deck-dir>\n" +
       "       decks studio requests <deck-dir>\n" +
       "       decks studio reply <deck-dir> <id> <text>\n" +
       "       decks studio resolve <deck-dir> <id...> [--reply <text>]\n",

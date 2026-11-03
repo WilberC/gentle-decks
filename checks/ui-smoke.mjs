@@ -331,11 +331,15 @@ try {
   await click("#send-all");
   await sleep(1200);
   const queuedTexts = requests().filter((r) => r.kind === "comment").slice(openBefore).map((r) => r.text);
-  check(
-    "queued comments reach the agent together",
+  check("queued comments reach the agent together",
     queuedTexts.includes("Primer comentario en cola") && queuedTexts.includes("Segundo comentario en cola"),
-    queuedTexts.join(" | "),
-  );
+    queuedTexts.join(" | "));
+
+  // S15: approve posts the request that tells the agent to deliver and stop the studio.
+  await click("#approve");
+  await answerDialog("");
+  await sleep(600);
+  check("approve posts the close request (S15)", requests().some((r) => r.kind === "approve"));
 
   // S1: a live change must not destroy text being typed in the composer.
   await setValue("#compose", "Borrador a medio escribir");

@@ -379,6 +379,15 @@ export function startStudio({ dir, port = 0, host = LOOPBACK, studioDir }) {
     studio.server.listen(port, host, () => {
       studio.server.off("error", reject);
       const actual = studio.server.address().port;
+      // S15: record the pid so `decks studio stop` can shut this server down after approval.
+      writeAtomic(studio.paths.pid, `${process.pid}\n`);
+      const cleanupPid = () => {
+        try {
+          fs.unlinkSync(studio.paths.pid);
+        } catch {}
+      };
+      process.once("exit", cleanupPid);
+      process.once("SIGTERM", () => process.exit(0));
       resolve({ ...studio, port: actual, url: `http://${host}:${actual}/${studio.token}/` });
     });
   });

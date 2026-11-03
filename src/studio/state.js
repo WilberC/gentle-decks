@@ -11,6 +11,8 @@ export const REQUESTS_FILE = "requests.json";
 // S2: the studio URL must be stable across restarts for the same deck, so the access token is
 // persisted next to the plan instead of being generated per server start.
 export const TOKEN_FILE = ".studio-token";
+// S15: the server records its pid so `decks studio stop` can shut it down after approval.
+export const PID_FILE = ".studio-pid";
 const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
 // S8: a request may carry a reply (string, at most 2000 characters) and when it was written.
 export const MAX_REPLY = 2000;
@@ -28,11 +30,22 @@ export function studioPaths(dir) {
     deck: path.join(root, `${slug}.md`),
     requests: path.join(root, REQUESTS_FILE),
     token: path.join(root, TOKEN_FILE),
+    pid: path.join(root, PID_FILE),
     themes: path.join(root, "themes"),
   };
 }
 
 export const sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
+
+// S15: the running studio's pid, or null when no studio is recorded for this deck.
+export function readStudioPid(paths) {
+  try {
+    const pid = Number(fs.readFileSync(paths.pid, "utf8").trim());
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
 
 // S2: returns the deck's persisted studio token, creating a fresh one only when the file is
 // missing or corrupt. A corrupt file is replaced, never trusted.
@@ -171,7 +184,7 @@ export const replyProblem = (text) =>
 
 // The agent bridge (S9): requests describe work an agent should do, and stay open until resolved.
 // S10/S11: `propose-style` carries theme work, so theme actions are not disguised as slide comments.
-export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style"];
+export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style", "approve"];
 const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow"]);
 const TEXT_KINDS = new Set(["comment", "redo", "add-slide"]);
 // S10/S11: what a `propose-style` request asks for: a new theme, an improvement, or an answer.

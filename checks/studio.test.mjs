@@ -278,6 +278,36 @@ test("artboards serve deck images embedded so the sandbox CSP renders them (S8, 
   assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`), "artboard image must be a data URI");
 });
 
+test("studio stop terminates the server and clears the pid file (S15)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  assert.equal(fs.readFileSync(path.join(dir, ".studio-pid"), "utf8").trim(), String(studio.child.pid));
+
+  const r = run("studio", "stop", dir);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /stopped/);
+  assert.ok(!fs.existsSync(path.join(dir, ".studio-pid")), "pid file must be removed");
+  const exit = await Promise.race([studio.exited, new Promise((resolve) => setTimeout(() => resolve("timeout"), 5000))]);
+  assert.notEqual(exit, "timeout", "the studio process must exit after stop");
+});
+
+test("studio stop fails cleanly when no studio is running (S15)", () => {
+  const r = run("studio", "stop", makeDeck());
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /not running/);
+  assert.equal(r.stdout, "");
+});
+
+test("POST api/requests accepts an approve request without slide scope (S15)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await send(studio, "POST", "api/requests", { kind: "approve" });
+  assert.equal(res.status, 200);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0].kind, "approve");
+});
+
 test("non-GET and Host guards reject cross-origin, wrong type, and big bodies (S5)", async (t) => {
   const studio = await startStudio(makeDeck());
   t.after(() => stopStudio(studio));

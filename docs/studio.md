@@ -52,6 +52,7 @@ each one and answers with `studio reply` or `studio resolve --reply`; see
 | `add-slide` | `slideId`, `text` | Adds a slide after that one, in the plan and the deck. |
 | `overflow` | `slideId` | Shortens or splits a slide that does not fit 1600×900. |
 | `propose-style` | `mode` (`new`, `improve`, `comment`), `theme`, `text` | Writes `decks/<slug>/themes/<name>.css`: a new theme, an improvement of `theme`, or the answer to your comment about `theme`. |
+| `approve` | — | The user approved the deck: deliver the final `-o` file, resolve the request, then stop the studio (`decks studio stop <deck-dir>`); the URL stops working. |
 
 ## Themes
 
