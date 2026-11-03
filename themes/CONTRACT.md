@@ -14,6 +14,13 @@ below; a theme missing one fails the check.
 - `@media print` lays out one slide per page at 1600×900.
 - `prefers-reduced-motion` disables slide transitions and decorative motion.
 - WCAG AA contrast for text on its background.
+- Vertical rhythm: set a block gap on `.slide` (about 2vh). Themes reset
+  margins, so without it bordered blocks, figures, and cards collapse against
+  neighboring elements the moment a deck grows beyond plain text.
+- Footer safe area: the `.slide` bottom padding must reserve the brand and
+  counter zone (at least 8vh on screen): no slide content may render behind
+  `.brand` or `.counter`, and nothing should sit so close to them that editing
+  it would collide with the footer.
 
 ## Required selectors
 
