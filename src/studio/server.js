@@ -163,11 +163,11 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     res.end(fs.readFileSync(file));
   }
 
-  function serveArtboard(res, url, id) {
+  async function serveArtboard(res, url, id) {
     const plan = readPlanDocument(paths);
     let html;
     try {
-      html = artboardHtml(paths, plan.problems ? undefined : plan.plan, id, url.searchParams.get("theme") ?? undefined);
+      html = await artboardHtml(paths, plan.problems ? undefined : plan.plan, id, url.searchParams.get("theme") ?? undefined);
     } catch (err) {
       return json(res, 422, { error: "build", message: err.message });
     }
@@ -182,10 +182,10 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     res.end(withInspector);
   }
 
-  function servePresent(res) {
+  async function servePresent(res) {
     let html;
     try {
-      html = presentHtml(paths);
+      html = await presentHtml(paths);
     } catch (err) {
       return json(res, 422, { error: "build", message: err.message });
     }
@@ -195,6 +195,24 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store",
       "Content-Security-Policy": PRESENT_CSP,
+    });
+    res.end(html);
+  }
+
+  // S3: the same self-contained deck as Present, offered as a download; images are embedded (S9)
+  // and the slide order is the established plan.json order (S18).
+  async function serveExport(res) {
+    let html;
+    try {
+      html = await presentHtml(paths);
+    } catch (err) {
+      return json(res, 422, { error: "build", message: err.message });
+    }
+    if (html === null) return json(res, 404, { error: "not-found" });
+    res.writeHead(200, {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Content-Disposition": `attachment; filename="${paths.slug}.html"`,
     });
     res.end(html);
   }
@@ -339,6 +357,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       if (route === "api/state") return serveState(res);
       if (route === "api/events") return serveEvents(req, res);
       if (route === "present") return servePresent(res);
+      if (route === "export") return serveExport(res);
       const slide = route.match(SLIDE_ROUTE);
       if (slide) return serveArtboard(res, url, slide[1]);
     }

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseFrontmatter, splitSlides, parseSlide, assignIds } from "../src/parse.js";
 import { renderDeck } from "../src/render.js";
+import { embedImages } from "../src/embed.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
 import { missingSelectors, findTheme, THEME_NAME } from "../src/theme.js";
@@ -73,7 +74,7 @@ function deckTheme(themeName, deckDir) {
   return theme.css;
 }
 
-function buildCommand() {
+async function buildCommand() {
   const outFile = flagValue("-o");
   const designDir = flagValue("--design");
   const input = args.find((a, k) => !a.startsWith("-") && !["-o", "--design"].includes(args[k - 1]));
@@ -99,7 +100,8 @@ function buildCommand() {
       console.log(`${slides.length} slides -> ${dir}`);
     } else {
       const navJs = fs.readFileSync(path.join(root, "src", "deck-nav.js"), "utf8");
-      const html = renderDeck({ meta, slides }, themeCss, navJs);
+      // Images are embedded, so the single-file export (and its PDF print) is self-contained (S9).
+      const html = await embedImages(renderDeck({ meta, slides }, themeCss, navJs), path.dirname(path.resolve(input)));
       fs.mkdirSync(path.dirname(path.resolve(outFile)), { recursive: true });
       fs.writeFileSync(outFile, html);
       console.log(`${slides.length} slides -> ${path.resolve(outFile)}`);

@@ -199,6 +199,62 @@ test("studio keeps the same URL across restarts for the same deck (S2)", async (
   assert.match(third.token, /^[A-Za-z0-9_-]{32}$/);
 });
 
+const PNG_1PX = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+test("-o embeds local images so the exported file is self-contained (S9)", () => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.writeFileSync(path.join(dir, "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n![dot](dot.png)"));
+  const out = path.join(dir, "out.html");
+  const build = spawnSync(process.execPath, [CLI, deckFile, "-o", out], { encoding: "utf8", env: ENV });
+  assert.equal(build.status, 0, build.stderr);
+  const html = fs.readFileSync(out, "utf8");
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`));
+  assert.ok(!html.includes('src="dot.png"'));
+});
+
+test("export serves a self-contained download with embedded images (S3, S9)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.mkdirSync(path.join(dir, "images"));
+  fs.writeFileSync(path.join(dir, "images", "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n![dot](images/dot.png)"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const slug = path.basename(dir);
+  const res = await fetch(`${studio.base}export`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-disposition"), new RegExp(`attachment; filename="${slug}\\.html"`));
+  const html = await res.text();
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`), "local image must be embedded");
+  assert.ok(!html.includes('src="images/dot.png"'), "no external references may remain");
+});
+
+test("export follows the established plan order even when the markdown was written out of order (S18)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  // The agent wrote the markdown with the slides in a different order than plan.json.
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  const chunks = scaffoldDeck(PLAN).split("\n---\n").filter((chunk) => chunk.trim() !== "");
+  const [head, ...slides] = chunks;
+  fs.writeFileSync(deckFile, [head, ...slides.slice().reverse()].join("\n---\n\n"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const html = await (await fetch(`${studio.base}export`)).text();
+  const at = (marker) => html.indexOf(marker);
+  assert.ok(at("One deck") < at("Second slide"), `plan order required: ${at("One deck")} < ${at("Second slide")}`);
+  assert.ok(at("Second slide") < at("Third slide"), `plan order required: ${at("Second slide")} < ${at("Third slide")}`);
+});
+
+test("export refuses when the deck is not written yet (S3)", async (t) => {
+  const studio = await startStudio(makeDeck());
+  t.after(() => stopStudio(studio));
+  const res = await fetch(`${studio.base}export`);
+  assert.equal(res.status, 404);
+});
+
 test("studio refuses a deck dir without plan.json (S5)", () => {
   const dir = tmp();
   const r = run("studio", dir, "--port", "0");

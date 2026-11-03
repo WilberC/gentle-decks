@@ -162,6 +162,7 @@ export function renderHeader() {
   progress.querySelector("i").style.width = `${pct}%`;
   document.getElementById("written").textContent = `${written} / ${slides.length} escritas`;
   document.getElementById("present").hidden = !st.deck?.exists;
+  document.getElementById("export").hidden = !st.deck?.exists;
   const redo = document.getElementById("redo");
   const selected = selectedSlide();
   redo.disabled = !selected || selected.status === "pending";
