@@ -14,7 +14,7 @@ export const THEME_SELECTORS = [
   // components
   ".card", ".card.accent", ".icon", ".step", ".step.hl", ".step.bad",
   ".term", ".bars", ".bar-row", ".bar-track", ".bar-fill.good", ".bar-fill.mid", ".bar-fill.bad",
-  ".stat", ".pill",
+  ".stat", ".pill", ".figure",
   // inline color tokens
   ".pink", ".gold", ".mint", ".blue", ".rose", ".peach", ".red", ".muted", ".dim", ".grad",
 ];

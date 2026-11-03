@@ -21,6 +21,12 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
   An unknown container fails the build: fix the markdown, never work around it.
 - Realistic content for the stated audience; no lorem ipsum.
 - One idea per slide. A slide that needs scrolling at 1600×900 is too dense: split it.
+- Every content slide carries one visual element: a `::: figure` image, a
+  `bars`/`stat`/`term` component, a table, or a structured layout (`steps`,
+  `grid`). Never deliver a run of text-only slides; prefer a figure whose data
+  comes from the slide's own text. Reference real image files under the deck
+  directory (`images/...`) or http(s) URLs: builds embed images as data URIs,
+  so exports and PDFs keep them.
 - Write the deck in the language the user asked for; set `lang:` to match.
 - Iterating edits only the slides concerned. Never rewrite the whole deck to fix one slide.
 

@@ -263,6 +263,21 @@ test("studio refuses a deck dir without plan.json (S5)", () => {
   assert.equal(r.stderr, `studio: ${path.join(dir, "plan.json")} not found\n`);
 });
 
+test("artboards serve deck images embedded so the sandbox CSP renders them (S8, S9)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.mkdirSync(path.join(dir, "images"));
+  fs.writeFileSync(path.join(dir, "images", "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n::: figure src=images/dot.png alt=dot\n:::"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const res = await fetch(`${studio.base}slides/second.html`);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`), "artboard image must be a data URI");
+});
+
 test("non-GET and Host guards reject cross-origin, wrong type, and big bodies (S5)", async (t) => {
   const studio = await startStudio(makeDeck());
   t.after(() => stopStudio(studio));

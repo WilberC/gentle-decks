@@ -33,6 +33,9 @@ kicker: Two
 
 ## Second **slide**
 
+::: figure src=images/dot.png alt="Un punto" caption="Fuente: ejemplo"
+:::
+
 ::: card
 Body
 :::
@@ -43,6 +46,22 @@ function writeDeck(dir, body = DECK) {
   fs.writeFileSync(file, body);
   return file;
 }
+
+test("figure renders an img with caption and fails without src (S8)", () => {
+  const dir = tmp();
+  const out = path.join(dir, "design", "tiny");
+  const r = run(writeDeck(dir), "--design", out);
+  assert.equal(r.code, 0, r.stderr);
+  const html = fs.readFileSync(path.join(out, "slides", "second.html"), "utf8");
+  assert.match(html, /<figure class="figure">/);
+  assert.match(html, /<img src="images\/dot\.png" alt="Un punto">/);
+  assert.match(html, /<figcaption>Fuente: ejemplo<\/figcaption>/);
+
+  const bad = DECK.replace('src=images/dot.png alt="Un punto" caption="Fuente: ejemplo"', 'alt="Un punto"');
+  const r2 = run(writeDeck(tmp(), bad), "-o", path.join(tmp(), "out.html"));
+  assert.equal(r2.code, 1);
+  assert.match(r2.stderr, /build failed:.*figure.*src.*slide 2/s);
+});
 
 test("writes one artboard per slide and a design.json manifest", () => {
   const dir = tmp();

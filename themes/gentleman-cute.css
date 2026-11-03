@@ -105,6 +105,11 @@
   .term pre { padding: 2.2vh 1.6vw; font-size: clamp(.9rem, 1.2vw, 1.15rem); line-height: 1.7; color: var(--text); white-space: pre-wrap; }
   .term .c { color: var(--dim); } .term .p { color: var(--accent); } .term .k { color: var(--champagne); } .term .s { color: var(--mint); } .term .e { color: var(--error); }
 
+  /* figure: an embedded image with its caption */
+  .figure { margin: 0; display: grid; gap: .8vh; }
+  .figure img { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--border-subtle); }
+  .figure figcaption { font-family: var(--mono); font-size: .85rem; color: var(--dim); }
+
   /* steps */
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2vw; margin-top: 2vh; }
   .step { background: var(--panel); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 2.4vh 1.2vw; }

@@ -4,7 +4,7 @@ import { parseContainers } from "./parse.js";
 // Container names the renderer understands: also the layout values a `layout` request may pick.
 export const CONTAINER_NAMES = new Set([
   "grid-2", "grid-3", "grid-4", "split", "steps", "card", "step",
-  "term", "bars", "stat", "pills",
+  "term", "bars", "stat", "pills", "figure",
 ]);
 
 const esc = (s) =>
@@ -61,6 +61,16 @@ function renderContainer(node, slideNo) {
       const num = node.attrs.num ? `<b>${esc(node.attrs.num)}</b>\n` : "";
       const title = node.attrs.title ? `<span>${esc(node.attrs.title)}</span>\n` : "";
       return `<div class="${cls}">\n${num}${title}<small>${stripSingleP(inner)}</small>\n</div>`;
+    }
+    case "figure": {
+      // S8: images are first-class slide content: `::: figure src=path alt=... caption=...`.
+      // Builds are self-contained, so the src is embedded as a data URI after rendering (S9).
+      const src = node.attrs.src;
+      if (!src) throw new Error(`figure needs a src= attribute on slide ${slideNo}`);
+      const cls = ["figure", ...node.mods].join(" ");
+      const alt = node.attrs.alt ?? "";
+      const cap = node.attrs.caption ? `\n<figcaption>${stripSingleP(md(node.attrs.caption))}</figcaption>` : "";
+      return `<figure class="${cls}">\n<img src="${esc(src)}" alt="${esc(alt)}">${cap}\n</figure>`;
     }
     case "stat": {
       const big = node.attrs.big ?? "";
