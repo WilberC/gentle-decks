@@ -188,6 +188,21 @@ export function renderStatus() {
   document.getElementById("status-requests").textContent = open
     ? `${open} ${open === 1 ? "petición abierta" : "peticiones abiertas"}`
     : "sin peticiones abiertas";
+  // S13: while a generate request is open, a banner states the queue and that nothing is required.
+  const queue = document.getElementById("queue");
+  if (!queue) return;
+  if (writing) {
+    const current = slides.find((s) => s.id === writing);
+    queue.replaceChildren(
+      el("b", { textContent: `✦ Escribiendo ${written} / ${slides.length}` }),
+      el("span", { textContent: current ? ` · en curso: “${current.title}”` : "" }),
+      el("span", { className: "q-hint", textContent: " · las diapositivas aparecen solas; podés seguir editando el esquema mientras esperás" }),
+    );
+    queue.hidden = false;
+  } else {
+    queue.hidden = true;
+    queue.replaceChildren();
+  }
 }
 
 export function render() {

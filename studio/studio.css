@@ -188,6 +188,11 @@ h1, h2, h3 { margin: 0; }
 .gen kbd { opacity: .75; }
 .gen-row p { margin: 0; font: 12px var(--mono); color: var(--secondary); max-width: 260px; }
 
+/* writing queue banner (S13) */
+.queue { margin: 10px 16px 0; padding: 8px 14px; border: 1px solid var(--accent); border-radius: var(--r-m); background: var(--surface-2); color: var(--text); font: 13px var(--sans); }
+.queue b { color: var(--accent); font-weight: 700; }
+.queue .q-hint { color: var(--secondary); }
+
 /* ---------- Boceto: text-only wireframe (S7) ---------- */
 .wire { width: 100%; max-width: 680px; display: grid; gap: 14px; padding: 28px 32px; border: 1px solid var(--border); border-radius: var(--r-l); background: var(--surface); }
 .wire-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }

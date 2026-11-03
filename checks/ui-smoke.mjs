@@ -253,11 +253,24 @@ try {
   await until(`document.querySelector('#tools [data-view="grid"]').getAttribute("aria-pressed") === "true"`, "Grid view after generate");
   check("generate posts a request and opens the Grid view", requests().some((r) => r.kind === "generate"));
 
+  // S13: while the agent writes, a visible banner states the queue and that nothing is required.
+  await until(`!document.getElementById("queue").hidden`, "writing banner visible");
+  check(
+    "writing banner states the queue while generating",
+    (await js(`document.getElementById("queue").textContent`)).includes("Escribiendo"),
+  );
+
   // Agent writes the deck after "generate".
   execFileSync(process.execPath, [CLI, "plan", "scaffold", path.join(deckDir, "plan.json"), "-o", path.join(deckDir, path.basename(deckDir) + ".md")]);
   await until(`document.querySelectorAll(".outline .row .th .frame").length >= 2`, "outline thumbnails fill live from SSE", 8000);
   await until(`document.querySelectorAll(".grid .frame").length >= 2`, "grid fills live from SSE", 8000);
   check("outline thumbnails and grid fill live after the agent writes the deck", true);
+  await until(`document.querySelectorAll(".grid .frame").length === ${plan().slides.length}`, "every slide rendered in the grid", 15000);
+  // The agent resolves the generate request when it finishes writing; the banner then clears (S13).
+  const gen = requests().find((r) => r.kind === "generate");
+  execFileSync(process.execPath, [CLI, "studio", "resolve", deckDir, gen.id], { stdio: "ignore" });
+  await until(`document.getElementById("queue").hidden`, "writing banner clears when done");
+  check("writing banner hides once the generate request is resolved", true);
 
   // Boceto of a written slide offers the real slide one click away (S7).
   await selectRow(0);
