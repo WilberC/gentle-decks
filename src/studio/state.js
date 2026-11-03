@@ -8,6 +8,10 @@ import { readPlan, scaffoldDeck } from "../plan.js";
 import { slideTitle } from "../design.js";
 
 export const REQUESTS_FILE = "requests.json";
+// S2: the studio URL must be stable across restarts for the same deck, so the access token is
+// persisted next to the plan instead of being generated per server start.
+export const TOKEN_FILE = ".studio-token";
+const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
 // S8: a request may carry a reply (string, at most 2000 characters) and when it was written.
 export const MAX_REPLY = 2000;
 // S8: api/state keeps only the most recent resolved requests browsable.
@@ -23,11 +27,26 @@ export function studioPaths(dir) {
     plan: path.join(root, "plan.json"),
     deck: path.join(root, `${slug}.md`),
     requests: path.join(root, REQUESTS_FILE),
+    token: path.join(root, TOKEN_FILE),
     themes: path.join(root, "themes"),
   };
 }
 
 export const sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
+
+// S2: returns the deck's persisted studio token, creating a fresh one only when the file is
+// missing or corrupt. A corrupt file is replaced, never trusted.
+export function readOrCreateStudioToken(paths) {
+  try {
+    const stored = fs.readFileSync(paths.token, "utf8").trim();
+    if (TOKEN_RE.test(stored)) return stored;
+  } catch {
+    // first run for this deck
+  }
+  const token = crypto.randomBytes(24).toString("base64url");
+  writeAtomic(paths.token, `${token}\n`);
+  return token;
+}
 
 function readBytes(file) {
   try {

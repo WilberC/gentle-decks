@@ -228,7 +228,12 @@ async function onChange(rev, themes) {
   const themesChanged = themes !== undefined && themes !== app.themesRev;
   if (themes !== undefined) app.themesRev = themes;
   if (!themesChanged && rev && (rev === app.state?.rev || rev === app.savedRev)) {
-    if (await loadState()) renderAreas();
+    // This change is the user's own save echoing back: never rebuild a pane under a focused field
+    // (it would drop the caret and typed text); the focusout handler refreshes when they leave (S1).
+    if (await loadState()) {
+      if (fieldFocused()) app.dirty = true;
+      else renderAreas();
+    }
     return;
   }
   if (fieldFocused()) {

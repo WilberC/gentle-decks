@@ -179,6 +179,26 @@ test("studio prints exactly one tokenized URL and 404s outside it (S5)", async (
   assert.equal((await call(studio, "api/state")).status, 200);
 });
 
+test("studio keeps the same URL across restarts for the same deck (S2)", async (t) => {
+  const dir = makeDeck();
+  const first = await startStudio(dir);
+  t.after(() => stopStudio(first));
+  assert.equal(first.token.length, 32);
+  assert.equal(fs.readFileSync(path.join(dir, ".studio-token"), "utf8").trim(), first.token);
+
+  await stopStudio(first);
+  const second = await startStudio(dir);
+  t.after(() => stopStudio(second));
+  assert.equal(second.token, first.token, "the persisted token must survive a restart");
+
+  // A corrupt token file is replaced, not trusted.
+  fs.writeFileSync(path.join(dir, ".studio-token"), "bad token with spaces/!");
+  await stopStudio(second);
+  const third = await startStudio(dir);
+  t.after(() => stopStudio(third));
+  assert.match(third.token, /^[A-Za-z0-9_-]{32}$/);
+});
+
 test("studio refuses a deck dir without plan.json (S5)", () => {
   const dir = tmp();
   const r = run("studio", dir, "--port", "0");

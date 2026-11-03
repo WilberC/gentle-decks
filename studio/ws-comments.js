@@ -125,9 +125,11 @@ function composer() {
   const index = list.findIndex((s) => s.id === app.current);
   const slide = list[index] ?? null;
   const box = el("div", { className: "compose" });
+  // The draft lives in `app`, keyed by slide: a re-render replaces this node, never the text (S1).
   const area = el("textarea", {
     id: "compose",
     rows: 2,
+    value: (slide && app.drafts.get(slide.id)) ?? "",
     ariaLabel: slide ? `Comentar en la diapositiva ${index + 1}` : "Comentar",
     placeholder: slide ? `Comentar en la diapositiva ${String(index + 1).padStart(2, "0")}…` : "Elige una diapositiva para comentar",
   });
@@ -138,10 +140,14 @@ function composer() {
     const text = area.value.trim();
     if (!text || !slide) return;
     area.value = "";
+    app.drafts.delete(slide.id);
     await postRequest({ kind: "comment", slideId: slide.id, text }, "Comentario enviado al agente.");
     document.getElementById("compose")?.focus();
   };
   send.addEventListener("click", submit);
+  area.addEventListener("input", () => {
+    if (slide) app.drafts.set(slide.id, area.value);
+  });
   area.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();

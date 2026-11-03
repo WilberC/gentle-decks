@@ -13,6 +13,7 @@ import { editSlideText } from "./edit.js";
 import {
   deckRev,
   openRequests,
+  readOrCreateStudioToken,
   readDeck,
   readPlanDocument,
   readRequests,
@@ -131,7 +132,8 @@ function fingerprint(paths) {
 
 export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
   const paths = studioPaths(dir);
-  const token = crypto.randomBytes(24).toString("base64url");
+  // S2: the token is persisted per deck, so the same deck keeps the same studio URL across restarts.
+  const token = readOrCreateStudioToken(paths);
   const prefix = `/${token}/`;
 
   const server = http.createServer((req, res) => {

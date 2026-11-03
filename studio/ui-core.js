@@ -26,6 +26,7 @@ export const app = {
   overflow: new Map(), // slide id -> boolean (gd:ready overflow)
   heights: new Map(), // slide id -> scrollHeight reported by gd:ready
   overflowSent: new Set(), // slide ids already reported once
+  drafts: new Map(), // slide id -> composer draft, so re-renders never lose typed text
   savedRev: null,
   dirty: false, // a re-render waits for the user to leave a field
   live: "connecting", // SSE state: "connecting" | "on" | "off"

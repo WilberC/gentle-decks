@@ -226,6 +226,17 @@ try {
   await sleep(800);
   check("composer posts a comment for the selected slide", requests().some((r) => r.text === "Que el ejemplo se vea en pantalla"));
 
+  // S1: a live change must not destroy text being typed in the composer.
+  await setValue("#compose", "Borrador a medio escribir");
+  await js(`document.getElementById("compose").blur(); true`);
+  const resolvable = requests().find((r) => r.kind === "comment" && r.status === "open");
+  if (resolvable) execFileSync(process.execPath, [CLI, "studio", "resolve", deckDir, resolvable.id], { stdio: "ignore" });
+  await sleep(1500);
+  check(
+    "live update keeps the composer draft",
+    (await js(`document.getElementById("compose").value`)) === "Borrador a medio escribir",
+  );
+
   // Edit text: click the cover bullet, type, Enter -> deck markdown changes for that slide only.
   const deckFile = path.join(deckDir, path.basename(deckDir) + ".md");
   const mdBefore = fs.readFileSync(deckFile, "utf8");
