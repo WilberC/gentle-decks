@@ -228,12 +228,17 @@ async function onChange(rev, themes) {
   // re-renders, so a theme edit before any other change is not missed.
   const themesChanged = themes !== undefined && themes !== app.themesRev;
   if (themes !== undefined) app.themesRev = themes;
+  // S18-proofing note: plan edits must reach the wireframe center too. Request changes never
+  // touch frames, but the text-only Boceto is cheap and frame-free.
   if (!themesChanged && rev && (rev === app.state?.rev || rev === app.savedRev)) {
     // This change is the user's own save echoing back: never rebuild a pane under a focused field
     // (it would drop the caret and typed text); the focusout handler refreshes when they leave (S1).
     if (await loadState()) {
       if (fieldFocused()) app.dirty = true;
-      else renderAreas();
+      else {
+        renderAreas();
+        if (app.view === "wire") renderCenter(centerEls());
+      }
     }
     return;
   }

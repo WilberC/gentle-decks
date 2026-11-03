@@ -137,6 +137,24 @@ try {
   await sleep(1200);
   check("edit title saves plan.json", plan().slides[0].title === "Por qué Python", plan().slides[0].title);
 
+  // S6: the bullet preview mirrors the points while editing.
+  await selectRow(1);
+  await until(`document.querySelectorAll(".points-preview li").length === 1`, "points preview bullets");
+  await setValue('.outline .row[aria-current="true"] .points', "Punto uno\nPunto dos");
+  await until(`document.querySelectorAll(".points-preview li").length === 2`, "points preview updates while typing");
+  await js(`document.querySelector('.outline .row[aria-current="true"] .points').blur(); true`);
+  await sleep(800);
+  check("points preview mirrors the saved points", plan().slides[1].points.join("|") === "Punto uno|Punto dos", plan().slides[1].points.join("|"));
+
+  // S7: selecting from the structure opens the text-only wireframe.
+  await selectRow(1);
+  await until(`document.querySelector('#tools [data-view="wire"]').getAttribute("aria-pressed") === "true"`, "wire view active");
+  check(
+    "wireframe shows the slide as text only",
+    (await js(`document.querySelector(".wire h2")?.textContent`)) === plan().slides[1].title
+      && (await js(`document.querySelectorAll(".wire-points li").length`)) === 2,
+  );
+
   // Add a slide after the last one.
   const before = plan().slides.length;
   await click(".o-foot .o-add");
@@ -170,7 +188,10 @@ try {
   const planComment = requests().find((r) => r.kind === "comment" && r.text === "Hazlo más visual");
   check("plan comment posts a request", !!planComment, planComment ? planComment.slideId : "missing");
 
-  // Theme selection (any other theme than the current one).
+  // Theme selection (any other theme than the current one); row selects opened Boceto, so
+  // go back to Estilo first.
+  await click('#tools [data-view="style"]');
+  await until(`!!document.querySelector(".theme")`, "theme cards visible again");
   const otherTheme = await js(`(() => {
     const current = [...document.querySelectorAll(".theme")].find((t) => t.getAttribute("aria-pressed") === "true");
     const other = [...document.querySelectorAll(".theme")].find((t) => t !== current);
@@ -190,6 +211,14 @@ try {
   await until(`document.querySelectorAll(".outline .row .th .frame").length >= 2`, "outline thumbnails fill live from SSE", 8000);
   await until(`document.querySelectorAll(".grid .frame").length >= 2`, "grid fills live from SSE", 8000);
   check("outline thumbnails and grid fill live after the agent writes the deck", true);
+
+  // Boceto of a written slide offers the real slide one click away (S7).
+  await selectRow(0);
+  await until(`document.querySelector('#tools [data-view="wire"]').getAttribute("aria-pressed") === "true"`, "wire view for written slide");
+  check(
+    "written slide wireframe links to the real slide",
+    (await js(`!!document.querySelector(".wire .btn")`)) && (await js(`document.querySelectorAll(".wire-points li").length`)) >= 1,
+  );
 
   // Slide view: comment mode click inside the slide.
   await click('#tools [data-view="slide"]');

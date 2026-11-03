@@ -59,7 +59,7 @@ function renderTools(tools) {
   if (!tools) return;
   tools.replaceChildren();
   tools.append(
-    segment("Vista", "view", [["style", "Estilo"], ["slide", "Slide"], ["grid", "Grid"]], app.view, (view) => {
+    segment("Vista", "view", [["style", "Estilo"], ["wire", "Boceto"], ["slide", "Slide"], ["grid", "Grid"]], app.view, (view) => {
       setView(view);
       tools.querySelector(`[data-view="${view}"]`)?.focus();
     }),
@@ -75,7 +75,11 @@ function renderTools(tools) {
   tools.append(
     el("span", {
       className: "keys",
-      textContent: app.view === "slide" ? "← → cambiar diapositiva" : app.view === "grid" ? "clic para abrir en Slide" : "las vistas previas usan tu estilo",
+      textContent:
+        app.view === "slide" ? "← → cambiar diapositiva"
+        : app.view === "grid" ? "clic para abrir en Slide"
+        : app.view === "wire" ? "boceto de solo texto, sin estilos ni tokens"
+        : "las vistas previas usan tu estilo",
     }),
   );
 }
@@ -120,11 +124,35 @@ function renderStage(stage) {
   stage.replaceChildren();
   stage.className = "stage";
   if (app.view === "style") return renderStyle(stage);
+  if (app.view === "wire") return renderWireframe(stage);
   if (app.view === "grid") {
     stage.classList.add("grid-stage");
     return renderGrid(stage);
   }
   return renderSlide(stage);
+}
+
+// S7: the wireframe preview shows the slide as plain text from plan.json only — no iframes,
+// no theme, no model tokens.
+function renderWireframe(stage) {
+  const slide = slidesInOrder().find((s) => s.id === app.current);
+  if (!slide) return stage.append(empty("El esquema está vacío."));
+  const i = slidesInOrder().findIndex((s) => s.id === slide.id);
+  const card = el("article", { className: "wire" });
+  const head = el("header", { className: "wire-head" }, el("span", { className: "wire-n", textContent: String(i + 1).padStart(2, "0") }), el("h2", { textContent: slide.title }));
+  if (slide.layout) head.append(el("span", { className: "tag", textContent: slide.layout }));
+  card.append(head);
+  const points = slide.points ?? [];
+  if (points.length) card.append(el("ul", { className: "wire-points" }, ...points.map((p) => el("li", { textContent: p }))));
+  if (slide.notes) card.append(el("p", { className: "wire-notes", textContent: `Notas para el agente: ${slide.notes}` }));
+  if (slide.status === "pending") {
+    card.append(el("p", { className: "muted", textContent: "Pendiente: se escribirá con tu estilo elegido." }));
+  } else {
+    const see = el("button", { type: "button", className: "btn", textContent: "Ver la diapositiva real →" });
+    see.addEventListener("click", () => setView("slide"));
+    card.append(see);
+  }
+  stage.append(card);
 }
 
 function empty(text) {
@@ -261,6 +289,8 @@ export function renderCaption(caption) {
     left.append(el("b", { textContent: label }), `: ${rest}`);
   } else if (app.view === "grid") {
     left.textContent = "Todas las diapositivas · clic en una para verla en Slide";
+  } else if (app.view === "wire") {
+    left.textContent = "Boceto: título y puntos tal como se generará, solo texto";
   } else {
     left.textContent = "El esquema siempre queda a la izquierda · e editar · c comentar";
   }

@@ -130,8 +130,21 @@ function row(slide, i) {
       ariaLabel: `Puntos de la diapositiva ${i + 1}, uno por línea`,
       placeholder: "Puntos, uno por línea",
     });
+    // S6: right under the textarea, the bullets exactly as the slide will render them.
+    const preview = el("ul", { className: "points-preview", ariaHidden: "true" });
+    const renderPreview = () => {
+      preview.replaceChildren(
+        ...points.value
+          .split("\n")
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .map((x) => el("li", { textContent: x })),
+      );
+    };
+    renderPreview();
     points.addEventListener("input", () => {
       points.rows = Math.max(1, points.value.split("\n").length);
+      renderPreview();
       mutate((p) => {
         p.slides[i].points = points.value
           .split("\n")
@@ -151,7 +164,7 @@ function row(slide, i) {
         else delete p.slides[i].notes;
       }, { now: false }),
     );
-    li.append(points, notes, acts(i, total, slide));
+    li.append(points, preview, notes, acts(i, total, slide));
   } else if (selected) {
     li.append(el("p", { className: "note", textContent: "Esta diapositiva no está en plan.json; solo se puede ver." }));
   }
@@ -217,10 +230,11 @@ export function select(i, { focusTitle = false, focusRow = true } = {}) {
   const slide = slidesInOrder()[i];
   if (!slide) return;
   const changed = app.current !== slide.id;
+  const viewChanged = app.view !== "wire";
   app.current = slide.id;
-  // A written slide opens in the Slide view; a pending one keeps the current view.
-  if (slide.status !== "pending" && app.view !== "slide") applyView("slide");
-  if (changed || focusTitle) render();
+  // Selecting from the structure always opens the text-only wireframe (S7); the real slide is one click away.
+  if (viewChanged) applyView("wire");
+  if (changed || focusTitle || viewChanged) render();
   const box = document.querySelector(`#outline .row[data-slide-id="${CSS.escape(slide.id)}"]`);
   if (focusTitle) box?.querySelector(".edit")?.focus();
   else if (focusRow) box?.focus();

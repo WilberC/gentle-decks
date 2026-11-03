@@ -94,11 +94,20 @@ h1, h2, h3 { margin: 0; }
 .st.over { color: var(--red); background: var(--bad-bg); }
 .st.p { color: var(--secondary); border: 1px dashed var(--border); }
 .cm { color: var(--warning); }
-.row[aria-current="true"] { background: var(--surface-2); border-color: var(--accent); }
+.row[aria-current="true"] { background: var(--surface-2); border-color: var(--accent); grid-template-columns: 26px 120px minmax(0, 1fr); }
+.row[aria-current="true"] .th { width: 120px; }
+/* S5: the selected row is the editing surface: give it comfortable type sizes. */
+.row[aria-current="true"] .edit { font: 600 15px/1.35 var(--sans); padding: 7px 10px; }
+.row[aria-current="true"] .points { font: 13px/1.55 var(--mono); padding: 7px 10px; min-height: 4.4rem; }
+.row[aria-current="true"] .note { font: 12px var(--mono); padding: 5px 10px; }
 .row .points, .row .edit, .row .note { grid-column: 3; width: 100%; font: 12.5px var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-s); padding: 4px 8px; margin-top: 6px; }
 .row .edit { border-color: var(--accent); font-weight: 600; }
 .row .note { font: 11.5px var(--mono); }
 .row .points { font: 12.5px var(--mono); resize: vertical; min-height: 3.4rem; }
+/* S6: the bullets exactly as the slide will render them, updated live while typing. */
+.points-preview { grid-column: 3; margin: 4px 0 0; padding: 6px 10px 6px 26px; border: 1px dashed var(--border); border-radius: var(--r-s); font: 13px/1.5 var(--sans); color: var(--secondary); }
+.points-preview li { margin: 1px 0; }
+.points-preview:empty { display: none; }
 .row .acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-subtle); font: 11.5px var(--mono); color: var(--secondary); }
 .row .acts button { border: 0; background: none; color: var(--secondary); padding: 2px 0; font: inherit; }
 .row .acts button:hover:not(:disabled) { color: var(--accent); }
@@ -157,6 +166,16 @@ h1, h2, h3 { margin: 0; }
 .gen { flex: 1; background: var(--primary-bg); color: var(--primary-fg); border: 0; border-radius: var(--r-m); padding: 13px 16px; font: 700 15px var(--sans); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .gen kbd { opacity: .75; }
 .gen-row p { margin: 0; font: 12px var(--mono); color: var(--secondary); max-width: 260px; }
+
+/* ---------- Boceto: text-only wireframe (S7) ---------- */
+.wire { width: 100%; max-width: 680px; display: grid; gap: 14px; padding: 28px 32px; border: 1px solid var(--border); border-radius: var(--r-l); background: var(--surface); }
+.wire-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wire-head h2 { font: 600 26px/1.25 var(--sans); overflow-wrap: anywhere; }
+.wire-n { font: 14px var(--mono); color: var(--accent); }
+.wire-points { margin: 0; padding-left: 22px; display: grid; gap: 8px; font: 16px/1.5 var(--sans); }
+.wire-points li::marker { color: var(--accent); }
+.wire-notes { margin: 0; font: 12.5px var(--mono); color: var(--secondary); border-top: 1px dashed var(--border); padding-top: 10px; overflow-wrap: anywhere; }
+.wire .btn { justify-self: start; }
 
 /* ---------- Grid ---------- */
 .grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }

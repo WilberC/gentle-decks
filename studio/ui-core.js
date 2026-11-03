@@ -6,10 +6,11 @@ export const SLIDE_H = 900;
 // Container names the renderer accepts (src/render.js CONTAINER_NAMES, minus the inline `step`).
 export const LAYOUTS = ["grid-2", "grid-3", "grid-4", "split", "steps", "card", "term", "bars", "stat", "pills"];
 
-export const VIEWS = ["style", "slide", "grid"];
+export const VIEWS = ["style", "wire", "slide", "grid"];
 // S3: canonical hashes, plus the hashes of the replaced stage screens as aliases.
 const ALIASES = new Map([
   ["style", "style"],
+  ["wire", "wire"],
   ["slide", "slide"],
   ["grid", "grid"],
   ["plan", "style"],
