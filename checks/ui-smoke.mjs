@@ -321,6 +321,22 @@ try {
   await sleep(800);
   check("composer posts a comment for the selected slide", requests().some((r) => r.text === "Que el ejemplo se vea en pantalla"));
 
+  // S14: several comments can be queued and sent to the agent together.
+  const openBefore = requests().filter((r) => r.kind === "comment").length;
+  await setValue("#compose", "Primer comentario en cola");
+  await click("#compose-queue");
+  await setValue("#compose", "Segundo comentario en cola");
+  await click("#compose-queue");
+  await until(`document.getElementById("send-all")?.textContent.includes("2")`, "queue shows two pending comments");
+  await click("#send-all");
+  await sleep(1200);
+  const queuedTexts = requests().filter((r) => r.kind === "comment").slice(openBefore).map((r) => r.text);
+  check(
+    "queued comments reach the agent together",
+    queuedTexts.includes("Primer comentario en cola") && queuedTexts.includes("Segundo comentario en cola"),
+    queuedTexts.join(" | "),
+  );
+
   // S1: a live change must not destroy text being typed in the composer.
   await setValue("#compose", "Borrador a medio escribir");
   await js(`document.getElementById("compose").blur(); true`);

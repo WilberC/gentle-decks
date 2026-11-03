@@ -238,7 +238,12 @@ h1, h2, h3 { margin: 0; }
 .compose textarea:focus-visible { outline-offset: 0; }
 .compose .row2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; font: 11px var(--mono); color: var(--secondary); }
 .compose .go { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); border-radius: var(--r-s); padding: 2px 8px; font: 11px var(--mono); }
+.compose .go.ghost { background: none; color: var(--accent); }
 .compose .go:disabled { opacity: .45; cursor: default; }
+.queue-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.queue-list li { display: flex; justify-content: space-between; gap: 8px; align-items: center; border: 1px dashed var(--border); border-radius: var(--r-s); padding: 3px 8px; font-size: 12px; color: var(--secondary); }
+.queue-list span { overflow-wrap: anywhere; }
+.queue-list button { border: 0; background: none; color: var(--red); font: 12px var(--mono); padding: 0 2px; }
 
 /* ---------- footer ---------- */
 .status { display: flex; align-items: center; gap: 18px; padding: 0 20px; border-top: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
