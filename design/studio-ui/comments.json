@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "comments": [
+    {
+      "id": "dy278hem",
+      "file": "05-workspace-edit.html",
+      "selector": "body > div > nav > ol",
+      "excerpt": "01 Por qué empezar con Python Por qué empezar con Python cover lista 02 La primera victoria La primera victoria llega rápido grid-2 lista 03 Hipótesis Leer el código se parece a leer una idea term no cabe ● 2 e editar c comentar r rehacer l layout 04 Conceptos Aprendes conceptos que sirven en cualqu",
+      "comment": "Esta vista esta bien y si queremos editar el contenido podemos editarlo directamente desde el slide?",
+      "createdAt": "2026-11-04T00:10:49.721Z",
+      "status": "resolved",
+      "sentAt": "2026-11-04T00:11:52.500Z",
+      "resolvedAt": "2026-11-04T00:13:30.810Z"
+    },
+    {
+      "id": "cg4aq9g8",
+      "file": "05-workspace-edit.html",
+      "selector": "body > div > main > div:nth-of-type(2) > div > div:nth-of-type(1) > h2",
+      "excerpt": "Leer código es como leer una idea",
+      "comment": "por ejemplo darle doble click y editar el texto o mostrar algo que nos deje editar o incluso quiza mover el elemento. Seria bueno como tener claro que estamos en una vista de edición entonces no necesitamos modificar a la izquierda",
+      "createdAt": "2026-11-04T00:11:36.037Z",
+      "status": "resolved",
+      "sentAt": "2026-11-04T00:11:52.500Z",
+      "resolvedAt": "2026-11-04T00:13:30.810Z"
+    },
+    {
+      "id": "2qui5h57",
+      "file": "05-workspace-edit.html",
+      "selector": "body > div > main > div:nth-of-type(1) > span:nth-of-type(1)",
+      "excerpt": "✎ modo edición · doble clic en cualquier texto · arrastra ⋮⋮ para mover",
+      "comment": "Quiza en un flotante o de otra forma porque aca se ve demasiado cargado y no se distinguen las otras opciones",
+      "createdAt": "2026-11-04T00:15:17.097Z",
+      "status": "resolved",
+      "sentAt": "2026-11-04T00:15:17.120Z",
+      "resolvedAt": "2026-11-04T00:15:51.450Z"
+    }
+  ]
+}

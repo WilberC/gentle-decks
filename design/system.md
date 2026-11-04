@@ -1,134 +1,100 @@
-# Design system — gentle-decks
+# gentle-decks design system
 
-Synced from the project's design sources. Values below are copied from the named files;
-nothing here is invented. The studio UI is moving toward the Gentle Shell look, so the
-Gentle Shell terminal palette is recorded as the reference for tool chrome.
+Tokens read from the project sources. Two token families live here: the
+**studio chrome** (the agent workspace UI, `studio/studio.css`) and the
+**deck themes** (slide palettes, `themes/*.css`). Artboards that show the
+studio use the chrome tokens; artboards that show slides use one theme.
 
-Studio skins: **gentle** (default, Gentle brand from gentlemanprogramming.com) and **flat**
-(Gentle Shell terminal palette). Both live in `design/_src/skins.css`; `design/_src/build.py`
-inlines them into the studio artboards.
+## Studio chrome — source: `studio/studio.css`
 
-Sources read:
+Two skins share the same variable names; components only use variables.
 
-- gentlemanprogramming.com stylesheets `/_astro/business.*.css` — Gentle brand (herdr / st palettes, fonts, radii)
-
-- `studio/studio.css` — current studio UI (light)
-- `themes/gentleman-cute.css` — deck theme (slides only)
-- Gentle Shell reference: `gentle-pi/themes/Gentle.json` (installed package, Pi terminal theme)
-
-## Colors
-
-### Gentle brand — skin `gentle` (source: gentlemanprogramming.com `/_astro/business.*.css`)
+### Colors (skin `gentle`, default)
 
 | Token | Value | Usage |
 | --- | --- | --- |
-| page bg | `#140a12` | App background (`body` on the site) |
-| `--st-base` | `#1a1218` | Subtle panels |
-| `--st-surface0` / `--herdr-surface-dim` | `#20161e` | Cards, rows |
-| `--st-surface1` / `--herdr-surface0` | `#241822` | Selected row |
-| `--st-surface2` / `--herdr-surface1` | `#342230` | Selection, strong border |
-| `--tm-border` / `--tm-border-soft` | `#ffffff17` / `#ffffff0f` | Hairlines |
-| `--herdr-text` | `#f6eff3` | Primary text |
-| `--herdr-subtext0` | `#a78e9b` | Secondary text |
-| `--st-subtext0` | `#76616b` | Muted text, decoration |
-| `--herdr-accent` | `#f095c8` | Accent, primary action, focus |
-| `--gentlepi-rose` | `#ff76c3` | Logo rose |
-| `--herdr-mauve` | `#ffb1dd` | Soft accent |
-| `--st-mauve` | `#d7a0b8` | Tags, headings |
-| `--herdr-blue` | `#a9c7ee` | Links, info |
-| `--herdr-green` | `#b4e7c7` | Success |
-| `--herdr-yellow` | `#e0c27a` | Notes, highlights |
-| `--herdr-peach` | `#f2b86d` | Warnings |
-| `--herdr-red` | `#ff718f` | Errors, overflow |
+| `--bg` | `#140a12` | app ground |
+| `--bg-subtle` | `#1a1218` | outline / comments columns |
+| `--surface` | `#20161e` | cards, buttons, rows hover |
+| `--surface-2` | `#241822` | selected rows, tabs |
+| `--selection` | `#342230` | selection fills |
+| `--border` | `#ffffff17` | component borders |
+| `--border-subtle` | `#ffffff0f` | hairlines |
+| `--border-strong` | `#342230` | emphasized borders |
+| `--text` | `#f6eff3` | primary text |
+| `--secondary` | `#a78e9b` | secondary text |
+| `--muted` | `#76616b` | tertiary text |
+| `--heading` | `#d7a0b8` | section headings |
+| `--accent` | `#f095c8` | accent, focus, active |
+| `--accent-strong` | `#ff76c3` | accent hover |
+| `--accent-soft` | `#ffb1dd` | accent borders, gradients |
+| `--on-accent` | `#1a0812` | text on accent |
+| `--green` | `#b4e7c7` | ok status |
+| `--warning` | `#f2b86d` | draft / open request status |
+| `--red` | `#ff718f` | error / overflow status |
+| `--blue` | `#a9c7ee` | links |
+| `--gold` | `#e0c27a` | spare |
+| `--ok-bg` | `#b4e7c71a` | ok chip background |
+| `--bad-bg` | `#ff718f1f` | error chip background |
+| `--glow` | radial gradients `#f095c824` / `#a9c7ee12` | body backdrop |
 
-Fonts: `--font-sans` `"Inter", "SF Pro Text", system-ui, …`; `--font-mono` `"IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, monospace`. Radii: `--shape-small` 8px, `--shape-medium` 12px, `--shape-large` 16px, `--shape-full` 999px.
-
-
-### Gentle Shell terminal — skin `flat` (reference: `gentle-pi/themes/Gentle.json`)
-
-| Token | Value | Usage |
-| --- | --- | --- |
-| `bg` | `#06080f` | App background, panels |
-| `bgSubtle` | `#0d0f14` | Raised surfaces, tool output, info boxes |
-| `userMessageBg` | `#161D2E` | Selected / active row background |
-| `selection` | `#232A40` | Selection, hover |
-| `border` | `#313342` | Panel borders |
-| `borderSubtle` | `#232A40` | Dividers, quiet borders |
-| `text` | `#F3F6F9` | Primary text |
-| `muted` | `#5C6170` | Secondary text, hints (large text or decoration only: below AA on `bg` for body text) |
-| `secondary` | `#A3B5D6` | Secondary readable text (AA on `bg`) |
-| `heading` | `#B5B2D0` | Headings |
-| `blue` | `#7FB4CA` | Accent: focus, links, active tool, borderAccent |
-| `accent` (gold) | `#E0C15A` | Brand accent, primary call to action |
-| `green` | `#B7CC85` | Success |
-| `warning` | `#DEBA87` | Warnings, quotes |
-| `red` | `#CB7C94` | Errors, overflow |
-| `syntaxKeyword` | `#C99AD6` | Code keyword |
-| `syntaxFunction` | `#B99BF2` | Code function |
-| `syntaxString` | `#DFBD76` | Code string |
-| `syntaxNumber` | `#A4DAA7` | Code number |
-| `toolSuccessBg` | `#1a2e1a` | Success surface |
-| `toolErrorBg` | `#2e1a1a` | Error surface |
-
-### Current studio UI (`studio/studio.css`, to be replaced)
+### Colors (skin `flat`)
 
 | Token | Value |
 | --- | --- |
-| `--bg` | `#f6f7fb` |
-| `--panel` | `#ffffff` |
-| `--ink` | `#14182b` |
-| `--muted` | `#5a6078` |
-| `--line` | `#dde1ee` |
-| `--accent` | `#3b4fd8` |
-| `--accent-soft` | `#eaedfd` |
-| `--warn` / `--warn-soft` | `#8a5a00` / `#fff4dc` |
-| `--bad` / `--bad-soft` | `#b3261e` / `#fde8e7` |
-| `--ok` | `#1d6b3a` |
+| `--bg` | `#06080f` |
+| `--bg-subtle` | `#0d0f14` |
+| `--surface` | `#0d0f14` |
+| `--surface-2` | `#161D2E` |
+| `--selection` | `#232A40` |
+| `--border` | `#313342` |
+| `--border-subtle` | `#232A40` |
+| `--border-strong` | `#313342` |
+| `--text` | `#F3F6F9` |
+| `--secondary` | `#A3B5D6` |
+| `--muted` | `#5C6170` |
+| `--heading` | `#B5B2D0` |
+| `--accent` / `--focus` / `--link` | `#7FB4CA` |
+| `--accent-soft` | `#A3B5D6` |
+| `--on-accent` | `#06080f` |
+| `--green` | `#B7CC85` · `--warning` | `#DEBA87` · `--red` | `#CB7C94` · `--gold` | `#E0C15A` · `--blue` | `#7FB4CA` |
+| `--primary-bg` | `#E0C15A` (primary buttons) |
+| `--glow` | `none` |
 
-### Deck theme `gentleman-cute` (`themes/gentleman-cute.css`, slides only)
+### Typography — source: `studio/studio.css`
 
-| Token | Value |
-| --- | --- |
-| `--bg` | `#060407` |
-| `--panel` | `#100A0F` |
-| `--user` | `#2A1523` |
-| `--border` | `#563040` |
-| `--text` | `#F6EFF3` |
-| `--muted` | `#A78E9B` |
-| `--accent` | `#F095C8` |
-| `--champagne` | `#E0C27A` |
-| `--mint` | `#B4E7C7` |
-| `--powder-blue` | `#A9C7EE` |
-| `--error` | `#FF718F` |
+- Body: `14px/1.45` skin sans. Gentle: `"Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif`. Flat: `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`.
+- Mono (labels, kbd, meta): `11–12px` skin mono. Gentle: `"IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace`. Flat: `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`.
+- Outline row title `h3`: `600 13.5px/1.3`; selected row title input: `600 15px/1.35`.
+- Section eyebrow: `11.5px mono`, letter-spacing `.18em`, uppercase, accent color.
+- Points preview / wireframe bullets: `13–16px` sans.
 
-## Typography
+### Spacing and shape
 
-| Role | Value | Source |
-| --- | --- | --- |
-| UI sans | `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` | `studio/studio.css` |
-| UI mono | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | `studio/studio.css` |
-| Deck sans | `"Inter", "SF Pro Display", -apple-system, "Segoe UI", system-ui, sans-serif` | `themes/gentleman-cute.css` |
-| Deck mono | `"JetBrains Mono", "Iosevka", "SF Mono", ui-monospace, Menlo, monospace` | `themes/gentleman-cute.css` |
-| Base size | `15px / 1.45` | `studio/studio.css` |
-| H1 / H2 | `1.6rem` / `1rem` | `studio/studio.css` |
-| Kicker | mono, `1.05rem`, `letter-spacing: .18em`, uppercase | `themes/gentleman-cute.css` |
+- Radius: `--r-s 8px`, `--r-m 12px`, `--r-l 16px` (flat: 4/6/8).
+- Workspace grid: `420px | 1fr | 300px` (≤1280px: `360px | 1fr | 264px`).
+- Row padding `8px`; column gutters `10px`; panels pad `14–18px`.
+- Outline row grid: `26px | 88px | 1fr` (selected: thumb 120px).
 
-## Spacing, radius, shadow
+### Component rules
 
-| Token | Value | Source |
-| --- | --- | --- |
-| `--radius` (studio) | `12px` | `studio/studio.css` |
-| Card radius (deck) | `18px` | `themes/gentleman-cute.css` |
-| Code radius (deck) | `6px` | `themes/gentleman-cute.css` |
-| Pill radius | `999px` | both |
-| `--shadow` (studio) | `0 1px 2px rgba(20,24,43,.06), 0 4px 16px rgba(20,24,43,.05)` | `studio/studio.css` |
-| Bar padding | `.6rem 1.2rem` | `studio/studio.css` |
+- Buttons `.btn`: surface bg, border, `6px 12px`; `.btn.primary` = accent bg + `--on-accent` text, bold.
+- Segmented control `.seg`: bordered group, active = `--surface-2` bg + accent text.
+- Status chips `.st.ok/.w/.over/.p`: colored text on translucent bg, `0 6px` padding, radius 4.
+- Tags `.tag`: mono, pill border, `--tag` color.
+- Tabs: text buttons, active = inset 2px accent underline.
+- Dialogs: `--surface` panel, radius `--r-m`, border, backdrop `--bg` at 70%.
+- Focus: `:focus-visible` 2px `--focus` outline, offset 2.
+- Motion: respect `prefers-reduced-motion`; transitions only on color/transform.
 
-## Component rules
+## Deck themes — slide palettes (for slide previews inside artboards)
 
-- Slides are 1600×900 artboards, always shown scaled at 16:9; the studio never restyles slide content.
-- Tool chrome uses skin variables only (`--bg`, `--surface`, `--accent`, `--primary-bg`, …), never raw colors, so `gentle` and `flat` stay interchangeable. `gentle` (default): rose `#f095c8` accent and primary action. `flat`: blue `#7FB4CA` accent, gold `#E0C15A` primary action.
-- Status and metadata (ids, slide numbers, request kinds, keybindings) use the mono stack.
-- Body text uses `text` or `secondary`; `muted` is only for decoration or ≥ 18px text (it is below AA for small text on `bg`).
-- Visible focus: 2px `blue` outline, 2px offset.
-- Motion respects `prefers-reduced-motion`.
+| Theme | Source | Ground | Text | Accent | Sans / Mono |
+| --- | --- | --- | --- | --- | --- |
+| `gentleman-cute` | `themes/gentleman-cute.css` | `#060407` | `#F6EFF3` | `#F095C8` (`#E0C27A` champagne, `#FF718F` error) | Inter / JetBrains Mono |
+| `fair-test` | `themes/fair-test.css` | `#ffffff` | `#1b1b3a` | `#2f6bff` + stages `#ff5a5f #ffb020 #22c55e #2f6bff #8b5cf6` | SF Pro Rounded / SF Mono |
+| `fair-test-gentle` | `themes/fair-test-gentle.css` | `#140a12` | `#f6eff3` | `#f095c8` + pastel stages `#ff718f #f2b86d #b4e7c7 #f095c8 #a9c7ee` | Inter / IosevkaTerm NF |
+
+Theme layout rules (from the themes): `.slide` is a flex column with `gap: 2.2vh`
+and `padding: 6vh 7vw 8vh` (footer safe area); never render content behind
+`.brand`/`.counter`.

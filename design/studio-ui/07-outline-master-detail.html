@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Outline · dirección maestro-detalle</title>
+<style>
+  :root {
+    --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822;
+    --border: #ffffff17; --border-subtle: #ffffff0f;
+    --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+    --accent: #f095c8; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+    --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f;
+    --ok-bg: #b4e7c71a;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --r-s: 8px; --r-m: 12px; --r-l: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), var(--bg); color: var(--text); font: 14px/1.45 var(--sans); display: flex; min-height: 100vh; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  .frame { flex: 1; display: grid; grid-template-columns: 460px 1fr; min-height: 100vh; }
+  .ghost { background: var(--bg-subtle); border-right: 1px solid var(--border-subtle); position: relative; }
+  .ghost::after { content: ""; position: absolute; inset: 0; background: var(--bg); opacity: .55; }
+  .center-ghost { display: grid; place-items: center; }
+  .center-ghost p { color: var(--muted); font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+
+  .outline { width: 460px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg-subtle); border-right: 1px solid var(--border-subtle); position: relative; z-index: 1; }
+  .o-head { padding: 18px 18px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .eyebrow { font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+  .o-head .count { font: 12px var(--mono); color: var(--secondary); }
+
+  /* dense list: scan-first */
+  .rows { list-style: none; padding: 4px 10px 10px; display: grid; gap: 2px; overflow-y: auto; align-content: start; }
+  .row { display: grid; grid-template-columns: 22px 14px minmax(0, 1fr) auto; gap: 0 8px; align-items: center; padding: 7px 8px; border-radius: var(--r-s); cursor: pointer; border: 1px solid transparent; }
+  .row:hover { background: var(--surface); }
+  .row.selected { background: var(--surface-2); border-color: var(--accent); }
+  .row .n { font: 12px var(--mono); color: var(--accent); }
+  .row .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.ok { background: var(--green); } .dot.p { background: none; border: 1.5px dashed var(--secondary); } .dot.w { background: var(--warning); }
+  .row h3 { font: 500 13.5px/1.3 var(--sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row.selected h3 { font-weight: 600; }
+  .row .meta { font: 11px var(--mono); color: var(--secondary); display: flex; gap: 6px; align-items: center; }
+  .drag { color: var(--muted); font: 12px var(--mono); cursor: grab; letter-spacing: -1px; }
+  .row .cm { color: var(--warning); font: 11px var(--mono); }
+
+  /* the editor: a fixed detail surface under the list */
+  .editor { margin: 0 14px 14px; border: 1px solid var(--accent); border-radius: var(--r-m); background: var(--surface-2); padding: 14px; display: grid; gap: 10px; box-shadow: 0 0 0 1px var(--accent); }
+  .editor .e-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .editor .e-head .where { font: 11.5px var(--mono); color: var(--accent); letter-spacing: .12em; text-transform: uppercase; }
+  .editor .e-head .jump { font: 11.5px var(--mono); color: var(--blue); }
+  .editor label { display: block; font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--heading); margin-bottom: 4px; }
+  .editor input { width: 100%; font: 600 16px/1.35 var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--accent); border-radius: var(--r-s); padding: 9px 11px; }
+  .editor .points { display: grid; gap: 6px; }
+  .editor .point { display: grid; grid-template-columns: 16px minmax(0, 1fr) 22px; gap: 8px; align-items: center; }
+  .editor .point::before { content: "❀"; color: var(--accent); font-size: 11px; }
+  .editor .point input { font: 400 13.5px/1.4 var(--sans); border-color: var(--border); font-weight: 400; padding: 6px 9px; }
+  .editor .point .rm { border: 0; background: none; color: var(--red); font: 13px var(--mono); cursor: pointer; }
+  .editor .add-point { border: 0; background: none; color: var(--accent); font: 12px var(--mono); text-align: left; cursor: pointer; padding: 2px 0; }
+  .editor .note { font: 12px var(--mono); color: var(--secondary); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-s); padding: 6px 9px; }
+  .editor .e-acts { display: flex; gap: 8px; }
+  .editor .e-acts .go { border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); border-radius: var(--r-s); padding: 5px 12px; font: 12px var(--mono); font-weight: 700; cursor: pointer; }
+  .editor .e-acts .ghostb { border: 1px solid var(--border); background: none; color: var(--secondary); border-radius: var(--r-s); padding: 5px 12px; font: 12px var(--mono); cursor: pointer; }
+
+  .o-foot { padding: 12px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; font: 12px var(--mono); color: var(--secondary); }
+  .o-foot .add { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-s); color: var(--accent); font: 12px var(--mono); padding: 4px 10px; cursor: pointer; }
+
+  .notes { width: 320px; padding: 40px 28px; display: grid; gap: 16px; align-content: start; }
+  .notes h1 { font: 700 18px var(--sans); }
+  .notes h1 small { display: block; font: 12px var(--mono); color: var(--accent); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+  .notes p { color: var(--secondary); font-size: 13px; }
+  .notes .trade { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-s); padding: 10px 12px; font-size: 12.5px; color: var(--secondary); background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="ghost" aria-hidden="true"></div>
+  <div class="center-ghost" aria-hidden="true"><p>centro · boceto / slide / grid</p></div>
+
+  <section class="outline" aria-label="Esquema, dirección maestro-detalle">
+    <div class="o-head">
+      <span class="eyebrow">Estructura</span>
+      <span class="count">6 diapositivas · 2 listas</span>
+    </div>
+    <ol class="rows">
+      <li class="row"><span class="n">01</span><span class="dot ok"></span><h3>Por qué empezar con Python</h3><span class="meta"><span class="drag">⋮⋮</span></span></li>
+      <li class="row selected" aria-current="true"><span class="n">02</span><span class="dot ok"></span><h3>La primera victoria llega rápido</h3><span class="meta"><span class="cm">●1</span> <span class="drag">⋮⋮</span></span></li>
+      <li class="row"><span class="n">03</span><span class="dot p"></span><h3>Variables y tipos sin drama</h3><span class="meta"><span class="drag">⋮⋮</span></span></li>
+      <li class="row"><span class="n">04</span><span class="dot p"></span><h3>Tu primer programa real</h3><span class="meta"><span class="drag">⋮⋮</span></span></li>
+      <li class="row"><span class="n">05</span><span class="dot w"></span><h3>Errores que no asustan</h3><span class="meta"><span class="drag">⋮⋮</span></span></li>
+      <li class="row"><span class="n">06</span><span class="dot p"></span><h3>Próximos pasos con Python</h3><span class="meta"><span class="drag">⋮⋮</span></span></li>
+    </ol>
+    <div class="editor" aria-label="Editor de la diapositiva 02">
+      <div class="e-head"><span class="where">02 · editando</span><span class="jump">ver en Boceto →</span></div>
+      <div>
+        <label for="t">Título</label>
+        <input id="t" value="La primera victoria llega rápido">
+      </div>
+      <div>
+        <label>Puntos</label>
+        <div class="points">
+          <div class="point"><input value="Sintaxis clara desde el primer día"><button class="rm" aria-label="Quitar punto">×</button></div>
+          <div class="point"><input value="Un programa útil en 10 líneas"><button class="rm" aria-label="Quitar punto">×</button></div>
+          <div class="point"><input value="Errores que se leen en español"><button class="rm" aria-label="Quitar punto">×</button></div>
+        </div>
+        <button class="add-point">+ añadir punto</button>
+      </div>
+      <div>
+        <label for="nt">Nota para el agente</label>
+        <input class="note" id="nt" value="Mencionar que print() muestra el resultado al instante">
+      </div>
+      <div class="e-acts"><button class="go">Guardar</button><button class="ghostb">Comentar</button><button class="ghostb">Borrar</button></div>
+    </div>
+    <div class="o-foot">
+      <span>6 diapositivas</span>
+      <button class="add">+ añadir diapositiva</button>
+    </div>
+  </section>
+</div>
+
+<aside class="notes">
+  <h1><small>Dirección 07</small>Maestro-detalle</h1>
+  <p>Lista densa para recorrer y reordenar (número, punto de estado, título en una línea, manija de arrastre). La edición vive en un panel fijo al pie de la columna: título grande, puntos como viñetas reales que se agregan y quitan, y nota para el agente.</p>
+  <p class="trade"><b>Trade-off:</b> un paso más para editar (seleccionar → editar en el panel); a cambio, la lista completa cabe sin scroll incluso en decks largos y el reordenar por arrastre se vuelve natural.</p>
+</aside>
+</body>
+</html>

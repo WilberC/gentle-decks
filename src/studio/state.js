@@ -184,8 +184,8 @@ export const replyProblem = (text) =>
 
 // The agent bridge (S9): requests describe work an agent should do, and stay open until resolved.
 // S10/S11: `propose-style` carries theme work, so theme actions are not disguised as slide comments.
-export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style", "approve"];
-const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow"]);
+export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style", "approve", "move"];
+const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow", "move"]);
 const TEXT_KINDS = new Set(["comment", "redo", "add-slide"]);
 // S10/S11: what a `propose-style` request asks for: a new theme, an improvement, or an answer.
 const THEME_MODES = ["new", "improve", "comment"];

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "chosen": "05-workspace-edit.html",
+  "handoffs": {
+    "05-workspace-edit.html": {
+      "status": "in_progress",
+      "queued": false,
+      "sentAt": "2026-11-04T00:21:50.254Z",
+      "startedAt": "2026-11-04T00:22:37.777Z",
+      "implementedAt": null,
+      "feature": "odd/tasks/issue-batch-1.md"
+    }
+  }
+}

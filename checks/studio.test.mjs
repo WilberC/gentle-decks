@@ -308,6 +308,24 @@ test("POST api/requests accepts an approve request without slide scope (S15)", a
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0].kind, "approve");
 });
 
+test("POST api/requests accepts a move request with selector and excerpt (S8a)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await send(studio, "POST", "api/requests", {
+    kind: "move",
+    slideId: "second",
+    selector: ".slide > div.grid-2 > p:nth-of-type(1)",
+    excerpt: "Un punto",
+  });
+  assert.equal(res.status, 200);
+  const req = JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0];
+  assert.equal(req.kind, "move");
+  assert.equal(req.selector, ".slide > div.grid-2 > p:nth-of-type(1)");
+  const bad = await send(studio, "POST", "api/requests", { kind: "move", excerpt: "sin slide" });
+  assert.equal(bad.status, 422);
+});
+
 test("non-GET and Host guards reject cross-origin, wrong type, and big bodies (S5)", async (t) => {
   const studio = await startStudio(makeDeck());
   t.after(() => stopStudio(studio));

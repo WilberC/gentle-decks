@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Outline · dirección tarjetas</title>
+<style>
+  :root {
+    --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822;
+    --border: #ffffff17; --border-subtle: #ffffff0f;
+    --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+    --accent: #f095c8; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+    --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f; --blue: #a9c7ee;
+    --ok-bg: #b4e7c71a; --bad-bg: #ff718f1f;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --r-s: 8px; --r-m: 12px; --r-l: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), var(--bg); color: var(--text); font: 14px/1.45 var(--sans); display: flex; min-height: 100vh; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  /* workspace context, dimmed */
+  .frame { flex: 1; display: grid; grid-template-columns: 460px 1fr; min-height: 100vh; }
+  .ghost { background: var(--bg-subtle); border-right: 1px solid var(--border-subtle); position: relative; }
+  .ghost::after { content: ""; position: absolute; inset: 0; background: var(--bg); opacity: .55; }
+  .center-ghost { display: grid; place-items: center; }
+  .center-ghost p { color: var(--muted); font: 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+
+  /* the direction: card-based outline */
+  .outline { width: 460px; display: flex; flex-direction: column; background: var(--bg-subtle); border-right: 1px solid var(--border-subtle); position: relative; z-index: 1; }
+  .o-head { padding: 18px 18px 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .eyebrow { font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+  .o-head .count { font: 12px var(--mono); color: var(--secondary); }
+  .rows { list-style: none; padding: 4px 14px 12px; display: grid; gap: 10px; overflow-y: auto; flex: 1; align-content: start; }
+  .card { border: 1px solid var(--border); border-radius: var(--r-m); background: var(--surface); padding: 10px; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 4px 12px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .card:hover { border-color: var(--accent-soft); }
+  .card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: var(--surface-2); }
+  .thumb { grid-row: 1 / 3; width: 132px; aspect-ratio: 16/9; border-radius: var(--r-s); background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, var(--bg) 6px 12px); border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .thumb.ready { background: linear-gradient(135deg, #2a1523, #100a0f); }
+  .thumb .n { position: absolute; left: 6px; top: 4px; font: 11px var(--mono); color: var(--accent); }
+  .thumb .fake-h { position: absolute; left: 10px; right: 12px; top: 34%; height: 9px; border-radius: 3px; background: #ffffff2e; }
+  .thumb .fake-h + .fake-h { top: 55%; width: 70%; height: 6px; background: #ffffff1a; }
+  .card h3 { font: 600 15px/1.3 var(--sans); overflow-wrap: anywhere; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; font: 11px var(--mono); color: var(--secondary); }
+  .st { padding: 0 6px; border-radius: 4px; }
+  .st.ok { color: var(--green); background: var(--ok-bg); }
+  .st.w { color: var(--warning); background: var(--surface-2); }
+  .st.p { color: var(--secondary); border: 1px dashed var(--border); }
+  .tag { color: var(--heading); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; }
+  .cm { color: var(--warning); }
+  .card .acts { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--border-subtle); font: 11.5px var(--mono); color: var(--secondary); }
+  .card .acts button { border: 0; background: none; color: var(--secondary); font: inherit; padding: 2px 0; cursor: pointer; }
+  .card .acts button:hover { color: var(--accent); }
+  kbd { font: 11px var(--mono); color: var(--accent); }
+  /* expanded editing surface: comfortable type */
+  .editor { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 10px; }
+  .editor label { font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--heading); }
+  .editor input, .editor textarea { width: 100%; font: 600 15px/1.4 var(--sans); color: var(--text); background: var(--bg); border: 1px solid var(--accent); border-radius: var(--r-s); padding: 8px 10px; }
+  .editor textarea { font: 400 13.5px/1.55 var(--sans); border-color: var(--border); resize: vertical; }
+  .bullets { list-style: none; display: grid; gap: 6px; margin-top: 2px; }
+  .bullets li { font: 13.5px/1.5 var(--sans); color: var(--secondary); padding-left: 18px; position: relative; }
+  .bullets li::before { content: "❀"; position: absolute; left: 0; color: var(--accent); font-size: 11px; top: 3px; }
+  .bullets li b { color: var(--text); font-weight: 500; }
+  .o-foot { margin-top: auto; padding: 12px 18px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; font: 12px var(--mono); color: var(--secondary); }
+  .o-foot .add { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-s); color: var(--accent); font: 12px var(--mono); padding: 4px 10px; cursor: pointer; }
+
+  /* annotation rail */
+  .notes { width: 320px; padding: 40px 28px; display: grid; gap: 16px; align-content: start; }
+  .notes h1 { font: 700 18px var(--sans); }
+  .notes h1 small { display: block; font: 12px var(--mono); color: var(--accent); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 6px; }
+  .notes p { color: var(--secondary); font-size: 13px; }
+  .notes .trade { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r-s); padding: 10px 12px; font-size: 12.5px; color: var(--secondary); background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="ghost" aria-hidden="true"></div>
+  <div class="center-ghost" aria-hidden="true"><p>centro · boceto / slide / grid</p></div>
+
+  <section class="outline" aria-label="Esquema, dirección tarjetas">
+    <div class="o-head">
+      <span class="eyebrow">Estructura</span>
+      <span class="count">6 diapositivas · 2 listas · ~9 min</span>
+    </div>
+    <ol class="rows">
+      <li class="card">
+        <div class="thumb ready"><span class="n">01</span><span class="fake-h"></span><span class="fake-h"></span></div>
+        <h3>Por qué empezar con Python</h3>
+        <div class="meta"><span class="st ok">lista</span><span class="tag">cover</span></div>
+      </li>
+      <li class="card selected" aria-current="true">
+        <div class="thumb ready"><span class="n">02</span><span class="fake-h"></span><span class="fake-h"></span></div>
+        <h3>La primera victoria llega rápido</h3>
+        <div class="meta"><span class="st ok">lista</span><span class="tag">grid-2</span><span class="cm">● 1 comentario</span></div>
+        <div class="editor">
+          <div>
+            <label for="t2">Título</label>
+            <input id="t2" value="La primera victoria llega rápido">
+          </div>
+          <div>
+            <label for="p2">Puntos</label>
+            <textarea id="p2" rows="3">Sintaxis clara desde el primer día
+Un programa útil en 10 líneas
+Errores que se leen en español</textarea>
+            <ul class="bullets" aria-hidden="true">
+              <li><b>Sintaxis clara</b> desde el primer día</li>
+              <li><b>Un programa útil</b> en 10 líneas</li>
+              <li><b>Errores que se leen</b> en español</li>
+            </ul>
+          </div>
+        </div>
+        <div class="acts">
+          <span><kbd>↑</kbd> <kbd>↓</kbd> mover</span>
+          <button>m</button> <span>combinar</span>
+          <button>c</button> <span>comentar</span>
+          <button>a</button> <span>añadir</span>
+          <button>⌫</button> <span>borrar</span>
+        </div>
+      </li>
+      <li class="card">
+        <div class="thumb"><span class="n">03</span></div>
+        <h3>Variables y tipos sin drama</h3>
+        <div class="meta"><span class="st p">pendiente</span></div>
+      </li>
+      <li class="card">
+        <div class="thumb"><span class="n">04</span></div>
+        <h3>Tu primer programa real</h3>
+        <div class="meta"><span class="st p">pendiente</span></div>
+      </li>
+    </ol>
+    <div class="o-foot">
+      <span>6 diapositivas</span>
+      <button class="add">+ añadir diapositiva</button>
+    </div>
+  </section>
+</div>
+
+<aside class="notes">
+  <h1><small>Dirección 06</small>Outline en tarjetas</h1>
+  <p>Cada diapositiva es una tarjeta con miniatura grande (132px), título de 15px y chips de estado. La tarjeta seleccionada se expande en el lugar: título, puntos y notas pasan a tamaño cómodo, con la preview de viñetas debajo.</p>
+  <p class="trade"><b>Trade-off:</b> más alto por fila (se ven ~4 tarjetas sin scroll); a cambio, la lectura y la edición son cómodas sin zoom y los estados se distinguen a la vuelta de página.</p>
+  <p>Las acciones viven dentro de la tarjeta (se muestran en la seleccionada y al hover), y el contador del encabezado anticipa la duración estimada de la presentación.</p>
+</aside>
+</body>
+</html>

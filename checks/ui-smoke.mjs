@@ -357,6 +357,12 @@ try {
   const mdBefore = fs.readFileSync(deckFile, "utf8");
   await click('#tools [data-mode="edit"]');
   await sleep(300);
+  // S8a (artboard 05): edit mode shows a floating status badge, dismissible with its ×.
+  await until(`!document.getElementById("edit-float").hidden`, "edit mode float badge visible");
+  await click("#edit-float .x");
+  await until(`!document.getElementById("edit-float")`, "edit float dismissed");
+  await click('#tools [data-mode="edit"]');
+  await until(`!document.getElementById("edit-float").hidden`, "edit float returns with edit mode");
   await clickInFrame("#stage .frame.big", 0.3, 0.545);
   await sleep(400);
   await send("Input.dispatchKeyEvent", { type: "keyDown", key: "End", code: "End", windowsVirtualKeyCode: 35 });
@@ -370,6 +376,17 @@ try {
     changed && mdAfter.replace(" hoy", "") === mdBefore,
     changed ? (mdAfter.match(/.*hoy.*/) || [""])[0].trim() : "deck unchanged",
   );
+
+  // S8a (artboard 05): dragging an element in edit mode asks the agent to move it.
+  const moveBefore = requests().filter((r) => r.kind === "move").length;
+  const frame = await js(`(() => { const r = document.querySelector("#stage .frame.big").getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
+  const from = { x: Math.round(frame.x + frame.w * 0.45), y: Math.round(frame.y + frame.h * 0.45) };
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button: "left", clickCount: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + 30, y: from.y + 40 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + 60, y: from.y + 80 });
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: from.x + 60, y: from.y + 80, button: "left" });
+  await sleep(1200);
+  check("drag in edit mode posts a move request", requests().filter((r) => r.kind === "move").length > moveBefore);
 
   // Skins: the switch persists across reload, and ?skin= overrides on load (S4).
   await click('.skin-switch button[data-skin="flat"]');

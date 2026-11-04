@@ -1,142 +1,141 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=1440">
-<title>gentle-decks design system</title>
+<title>gentle-decks · design system</title>
 <style>
   :root {
-    --bg: #06080f; --bg-subtle: #0d0f14; --row: #161D2E; --selection: #232A40;
-    --border: #313342; --border-subtle: #232A40; --text: #F3F6F9; --muted: #5C6170;
-    --secondary: #A3B5D6; --heading: #B5B2D0; --blue: #7FB4CA; --gold: #E0C15A;
-    --green: #B7CC85; --warning: #DEBA87; --red: #CB7C94; --kw: #C99AD6; --fn: #B99BF2;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #140a12; --bg-subtle: #1a1218; --surface: #20161e; --surface-2: #241822;
+    --border: #ffffff17; --border-subtle: #ffffff0f;
+    --text: #f6eff3; --secondary: #a78e9b; --muted: #76616b; --heading: #d7a0b8;
+    --accent: #f095c8; --accent-strong: #ff76c3; --accent-soft: #ffb1dd; --on-accent: #1a0812;
+    --green: #b4e7c7; --warning: #f2b86d; --red: #ff718f; --blue: #a9c7ee; --gold: #e0c27a;
+    --ok-bg: #b4e7c71a; --bad-bg: #ff718f1f;
+    --sans: "Inter", "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IosevkaTerm NF", "Iosevka Term", "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --r-s: 8px; --r-m: 12px; --r-l: 16px;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--sans); padding: 48px 56px; width: 1440px; }
-  h1 { font-size: 28px; margin: 0 0 4px; color: var(--text); }
-  h2 { font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--heading); margin: 40px 0 16px; }
-  p.lead { color: var(--secondary); margin: 0; }
-  .swatches { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
-  .sw { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg-subtle); }
-  .sw i { display: block; height: 64px; }
-  .sw b { display: block; font: 600 12px var(--mono); padding: 8px 10px 0; }
-  .sw span { display: block; font: 12px var(--mono); color: var(--secondary); padding: 2px 10px 10px; }
-  .group { color: var(--secondary); font: 12px var(--mono); margin: 18px 0 8px; }
-  .type div { display: flex; gap: 24px; align-items: baseline; border-bottom: 1px solid var(--border-subtle); padding: 10px 0; }
-  .type code { width: 160px; font: 12px var(--mono); color: var(--secondary); }
-  .row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-  .btn { font: 500 14px var(--sans); border-radius: 6px; padding: 7px 14px; border: 1px solid var(--border); background: var(--bg-subtle); color: var(--text); }
-  .btn.primary { background: var(--gold); color: #1a1405; border-color: var(--gold); font-weight: 600; }
-  .btn.active { border-color: var(--blue); color: var(--blue); background: var(--row); }
-  .btn:focus-visible, .btn.focus { outline: 2px solid var(--blue); outline-offset: 2px; }
-  .chip { font: 12px var(--mono); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border); color: var(--secondary); }
-  .chip.ok { color: var(--green); border-color: #3a4a2a; background: #1a2e1a; }
-  .chip.warn { color: var(--warning); border-color: #4a3f2a; }
-  .chip.bad { color: var(--red); border-color: #4a2a35; background: #2e1a1a; }
-  .panel { border: 1px solid var(--border); border-radius: 8px; background: var(--bg-subtle); width: 520px; }
-  .panel header { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font: 12px var(--mono); color: var(--secondary); }
-  .panel .line { display: flex; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); font-size: 14px; }
-  .panel .line:last-child { border-bottom: 0; }
-  .panel .line.sel { background: var(--row); box-shadow: inset 2px 0 0 var(--blue); }
-  .num { font: 12px var(--mono); color: var(--blue); width: 22px; }
-  .radii { display: flex; gap: 16px; }
-  .radii div { width: 96px; height: 64px; border: 1px solid var(--border); background: var(--bg-subtle); display: grid; place-items: center; font: 12px var(--mono); color: var(--secondary); }
-  .term { font: 13px/1.6 var(--mono); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; width: 520px; }
-  .term .p { color: var(--blue); } .term .k { color: var(--kw); } .term .f { color: var(--fn); } .term .s { color: var(--gold); } .term .c { color: var(--muted); }
-  .note { color: var(--secondary); font-size: 13px; max-width: 760px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: radial-gradient(900px 420px at 18% -10%, #f095c824, transparent 60%), var(--bg); color: var(--text); font: 14px/1.45 var(--sans); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 40px 32px 64px; }
+  .eyebrow { font: 11.5px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  h1 { font: 700 26px var(--sans); margin-bottom: 6px; }
+  .lede { color: var(--secondary); margin-bottom: 28px; }
+  section { margin-bottom: 34px; }
+  h2 { font: 600 15px var(--sans); color: var(--heading); margin-bottom: 12px; }
+  .grid { display: grid; gap: 10px; }
+  .swatches { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .sw { border: 1px solid var(--border); border-radius: var(--r-m); overflow: hidden; background: var(--surface); }
+  .sw i { display: block; height: 52px; }
+  .sw div { padding: 8px 10px; font: 11px var(--mono); color: var(--secondary); }
+  .sw b { display: block; color: var(--text); font-weight: 600; }
+  .type { display: grid; gap: 8px; }
+  .type p { border: 1px solid var(--border-subtle); border-radius: var(--r-s); padding: 10px 14px; background: var(--bg-subtle); }
+  .radii { grid-template-columns: repeat(3, 1fr); }
+  .rad { padding: 22px; text-align: center; font: 11px var(--mono); color: var(--secondary); background: var(--surface-2); border: 1px solid var(--border); }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: var(--r-s); padding: 6px 12px; font: 13px var(--sans); cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+  .btn.primary:hover { background: var(--accent-strong); }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: var(--r-s); overflow: hidden; }
+  .seg button { border: 0; background: none; padding: 5px 11px; color: var(--secondary); font: 13px var(--sans); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--accent); }
+  .st { padding: 0 6px; border-radius: 4px; font: 11px var(--mono); }
+  .st.ok { color: var(--green); background: var(--ok-bg); }
+  .st.w { color: var(--warning); background: var(--surface-2); }
+  .st.over { color: var(--red); background: var(--bad-bg); }
+  .st.p { color: var(--secondary); border: 1px dashed var(--border); }
+  .tag { color: var(--heading); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; font: 11px var(--mono); }
+  kbd { font: 11px var(--mono); border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; color: var(--accent); }
+  .themes { grid-template-columns: repeat(3, 1fr); }
+  .theme { border: 1px solid var(--border); border-radius: var(--r-m); overflow: hidden; }
+  .theme header { padding: 8px 12px; font: 12px var(--mono); background: var(--surface); }
+  .bars { display: flex; height: 46px; }
+  .bars i { flex: 1; }
+  .theme footer { padding: 8px 12px; font: 11px var(--mono); color: var(--secondary); background: var(--surface); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>gentle-decks · design system</h1>
-  <p class="lead">Studio chrome has two skins: Gentle (brand, default) and Flat (Gentle Shell terminal). Slides keep their own deck theme.</p>
-</header>
+<div class="wrap">
+  <p class="eyebrow">gentle-decks</p>
+  <h1>Design system</h1>
+  <p class="lede">Tokens del chrome del studio (studio/studio.css, skin gentle) y paletas de los tres themes. Fuente de verdad: design/system.md.</p>
 
-<main>
-<h2>Colors · Gentle brand (skin "gentle", default)</h2>
-<div class="swatches">
-  <div class="sw"><i style="background:#140a12"></i><b>page bg</b><span>#140a12</span></div>
-  <div class="sw"><i style="background:#20161e"></i><b>surface0</b><span>#20161e</span></div>
-  <div class="sw"><i style="background:#342230"></i><b>surface2</b><span>#342230</span></div>
-  <div class="sw"><i style="background:#f6eff3"></i><b>text</b><span>#f6eff3</span></div>
-  <div class="sw"><i style="background:#a78e9b"></i><b>subtext0</b><span>#a78e9b</span></div>
-  <div class="sw"><i style="background:#f095c8"></i><b>accent</b><span>#f095c8</span></div>
-  <div class="sw"><i style="background:#ff76c3"></i><b>gentle rose</b><span>#ff76c3</span></div>
-  <div class="sw"><i style="background:#ffb1dd"></i><b>mauve</b><span>#ffb1dd</span></div>
-  <div class="sw"><i style="background:#a9c7ee"></i><b>blue</b><span>#a9c7ee</span></div>
-  <div class="sw"><i style="background:#b4e7c7"></i><b>green</b><span>#b4e7c7</span></div>
-  <div class="sw"><i style="background:#e0c27a"></i><b>yellow</b><span>#e0c27a</span></div>
-  <div class="sw"><i style="background:#f2b86d"></i><b>peach</b><span>#f2b86d</span></div>
-  <div class="sw"><i style="background:#ff718f"></i><b>red</b><span>#ff718f</span></div>
-  <div class="sw"><i style="background:#d7a0b8"></i><b>st-mauve</b><span>#d7a0b8</span></div>
-</div>
-<p class="group">source: gentlemanprogramming.com stylesheets · Inter + IosevkaTerm · radii 8 / 12 / 16 / 999</p>
-
-<h2>Colors · Gentle Shell terminal (skin "flat")</h2>
-<p class="group">surfaces</p>
-<div class="swatches">
-  <div class="sw"><i style="background:#06080f"></i><b>bg</b><span>#06080f</span></div>
-  <div class="sw"><i style="background:#0d0f14"></i><b>bgSubtle</b><span>#0d0f14</span></div>
-  <div class="sw"><i style="background:#161D2E"></i><b>userMessageBg</b><span>#161D2E</span></div>
-  <div class="sw"><i style="background:#232A40"></i><b>selection</b><span>#232A40</span></div>
-  <div class="sw"><i style="background:#313342"></i><b>border</b><span>#313342</span></div>
-  <div class="sw"><i style="background:#1a2e1a"></i><b>toolSuccessBg</b><span>#1a2e1a</span></div>
-  <div class="sw"><i style="background:#2e1a1a"></i><b>toolErrorBg</b><span>#2e1a1a</span></div>
-</div>
-<p class="group">text and accents</p>
-<div class="swatches">
-  <div class="sw"><i style="background:#F3F6F9"></i><b>text</b><span>#F3F6F9</span></div>
-  <div class="sw"><i style="background:#A3B5D6"></i><b>secondary</b><span>#A3B5D6</span></div>
-  <div class="sw"><i style="background:#B5B2D0"></i><b>heading</b><span>#B5B2D0</span></div>
-  <div class="sw"><i style="background:#5C6170"></i><b>muted</b><span>#5C6170</span></div>
-  <div class="sw"><i style="background:#7FB4CA"></i><b>blue</b><span>#7FB4CA</span></div>
-  <div class="sw"><i style="background:#E0C15A"></i><b>accent (gold)</b><span>#E0C15A</span></div>
-  <div class="sw"><i style="background:#B7CC85"></i><b>green</b><span>#B7CC85</span></div>
-  <div class="sw"><i style="background:#DEBA87"></i><b>warning</b><span>#DEBA87</span></div>
-  <div class="sw"><i style="background:#CB7C94"></i><b>red</b><span>#CB7C94</span></div>
-  <div class="sw"><i style="background:#C99AD6"></i><b>syntaxKeyword</b><span>#C99AD6</span></div>
-  <div class="sw"><i style="background:#B99BF2"></i><b>syntaxFunction</b><span>#B99BF2</span></div>
-  <div class="sw"><i style="background:#DFBD76"></i><b>syntaxString</b><span>#DFBD76</span></div>
-</div>
-
-<h2>Typography</h2>
-<div class="type">
-  <div><code>h1 · 28px sans</code><span style="font-size:28px;font-weight:600">Review the plan</span></div>
-  <div><code>body · 15px sans</code><span>Edit the outline, then generate.</span></div>
-  <div><code>label · 12px mono</code><span style="font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--heading)">Outline</span></div>
-  <div><code>meta · 12px mono</code><span style="font:12px var(--mono);color:var(--secondary)">first-win · grid-2 · ready</span></div>
-</div>
-
-<h2>Components</h2>
-<div class="row">
-  <button class="btn primary">Generate</button>
-  <button class="btn">Add slide</button>
-  <button class="btn active">Comment</button>
-  <button class="btn focus">Focused</button>
-  <span class="chip">template</span>
-  <span class="chip ok">ready</span>
-  <span class="chip warn">draft</span>
-  <span class="chip bad">overflow</span>
-</div>
-<div class="row" style="margin-top:20px;align-items:flex-start">
-  <section class="panel" aria-label="Outline panel">
-    <header><span>outline</span><span>8 slides</span></header>
-    <div class="line"><span class="num">01</span>Por qué empezar con Python</div>
-    <div class="line sel"><span class="num">02</span>La primera victoria llega rápido</div>
-    <div class="line"><span class="num">03</span>Leer el código se parece a leer una idea</div>
+  <section>
+    <h2>Colores del chrome</h2>
+    <div class="grid swatches">
+      <div class="sw"><i style="background:#140a12"></i><div><b>--bg</b>#140a12</div></div>
+      <div class="sw"><i style="background:#1a1218"></i><div><b>--bg-subtle</b>#1a1218</div></div>
+      <div class="sw"><i style="background:#20161e"></i><div><b>--surface</b>#20161e</div></div>
+      <div class="sw"><i style="background:#241822"></i><div><b>--surface-2</b>#241822</div></div>
+      <div class="sw"><i style="background:#f6eff3"></i><div><b>--text</b>#f6eff3</div></div>
+      <div class="sw"><i style="background:#a78e9b"></i><div><b>--secondary</b>#a78e9b</div></div>
+      <div class="sw"><i style="background:#d7a0b8"></i><div><b>--heading</b>#d7a0b8</div></div>
+      <div class="sw"><i style="background:#f095c8"></i><div><b>--accent</b>#f095c8</div></div>
+      <div class="sw"><i style="background:#ff76c3"></i><div><b>--accent-strong</b>#ff76c3</div></div>
+      <div class="sw"><i style="background:#ffb1dd"></i><div><b>--accent-soft</b>#ffb1dd</div></div>
+      <div class="sw"><i style="background:#b4e7c7"></i><div><b>--green</b>#b4e7c7</div></div>
+      <div class="sw"><i style="background:#f2b86d"></i><div><b>--warning</b>#f2b86d</div></div>
+      <div class="sw"><i style="background:#ff718f"></i><div><b>--red</b>#ff718f</div></div>
+      <div class="sw"><i style="background:#a9c7ee"></i><div><b>--blue</b>#a9c7ee</div></div>
+    </div>
   </section>
-  <pre class="term" aria-label="Agent bridge"><span class="c"># agent bridge</span>
-<span class="p">❯</span> <span class="f">decks</span> studio decks/demo
-studio: http://127.0.0.1:47311/<span class="s">…</span>/
-<span class="k">request</span> mvx1 comment first-win
-<span class="k">request</span> mvx2 generate -</pre>
-</div>
 
-<h2>Radius</h2>
-<div class="radii"><div style="border-radius:4px">4 chip</div><div style="border-radius:6px">6 button</div><div style="border-radius:8px">8 panel</div><div style="border-radius:999px">999 pill</div></div>
-<p class="note" style="margin-top:24px">Skin "gentle" uses the brand radii 8/12/16; skin "flat" uses 4/6/8. The current studio tokens (light, indigo) and the deck theme are listed in design/system.md.</p>
-</main>
+  <section>
+    <h2>Tipografía</h2>
+    <div class="type">
+      <p><span style="font:700 26px var(--sans)">Título de sección — 700 26px Inter</span></p>
+      <p><span style="font:600 15px/1.35 var(--sans)">Título de fila seleccionada — 600 15px/1.35</span></p>
+      <p><span style="font:600 13.5px/1.3 var(--sans)">Título de fila del esquema — 600 13.5px/1.3</span></p>
+      <p><span style="font:13px/1.55 var(--mono); color:var(--secondary)">cuerpo mono · ruta, estado, meta — 13px mono</span></p>
+      <p><span style="font:11.5px var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--accent)">eyebrow de sección — 11.5px mono caps</span></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Radio</h2>
+    <div class="grid radii">
+      <div class="rad" style="border-radius:8px">--r-s · 8px</div>
+      <div class="rad" style="border-radius:12px">--r-m · 12px</div>
+      <div class="rad" style="border-radius:16px">--r-l · 16px</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Componentes</h2>
+    <div class="row">
+      <button class="btn">Acción</button>
+      <button class="btn primary">✦ Generar</button>
+      <div class="seg" role="group">
+        <button aria-pressed="true">Estilo</button><button aria-pressed="false">Boceto</button><button aria-pressed="false">Slide</button><button aria-pressed="false">Grid</button>
+      </div>
+      <span class="st ok">lista</span><span class="st w">escribiendo…</span><span class="st over">no cabe</span><span class="st p">pendiente</span>
+      <span class="tag">steps</span>
+      <span><kbd>e</kbd> editar · <kbd>c</kbd> comentar · <kbd>⌘↵</kbd> enviar</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Paletas de los themes (para previews de diapositivas)</h2>
+    <div class="grid themes">
+      <div class="theme">
+        <header>gentleman-cute</header>
+        <div class="bars"><i style="background:#060407"></i><i style="background:#F095C8"></i><i style="background:#E0C27A"></i><i style="background:#FF718F"></i><i style="background:#F6EFF3"></i></div>
+        <footer>Inter · JetBrains Mono</footer>
+      </div>
+      <div class="theme">
+        <header>fair-test</header>
+        <div class="bars"><i style="background:#ff5a5f"></i><i style="background:#ffb020"></i><i style="background:#22c55e"></i><i style="background:#2f6bff"></i><i style="background:#8b5cf6"></i></div>
+        <footer>SF Pro Rounded · SF Mono</footer>
+      </div>
+      <div class="theme">
+        <header>fair-test-gentle</header>
+        <div class="bars"><i style="background:#140a12"></i><i style="background:#ff718f"></i><i style="background:#f2b86d"></i><i style="background:#b4e7c7"></i><i style="background:#f095c8"></i></div>
+        <footer>Inter · IosevkaTerm NF</footer>
+      </div>
+    </div>
+  </section>
+</div>
 </body>
 </html>

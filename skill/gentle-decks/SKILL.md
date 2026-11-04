@@ -141,6 +141,7 @@ Keep replies to one or two sentences in the user's language.
 | `layout` | Rewrite slide `slideId` with the container `layout`, keeping its content. |
 | `add-slide` | Add a slide after `slideId` about `text`, in `plan.json` and in the deck, with a new unique id. |
 | `overflow` | Slide `slideId` is taller than 1600×900: shorten it or split it into two slides. |
+| `move` | Slide `slideId`: the user dragged an element in Edit mode; `selector`/`excerpt` name it. Move that element in the slide's markdown (reorder the block), keeping its content. |
 | `propose-style` | `mode: new` proposes a brand-new theme for the deck; `mode: improve` or `mode: comment` with `theme: <name>` edits or discusses that theme's CSS in `themes/<name>.css`. Run `theme check` after writing. |
 | `approve` | The user approved the deck: deliver the final file (`-o` build), resolve the request with what was delivered, then stop the studio with `decks studio stop <deck-dir>`; the URL stops working. |
 | `propose-style` | Theme work, by `mode`: `new` proposes a theme for this deck (honor `text` as the look; there is no `theme` field); `improve` edits the CSS of `theme` following `text` (may be empty); `comment` answers the user's `text` about `theme`. Write the CSS to `decks/<slug>/themes/<name>.css`, follow `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css` until it prints `ok`. |

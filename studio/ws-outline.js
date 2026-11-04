@@ -10,6 +10,7 @@ import {
   render,
   savePlan,
   savePlanSoon,
+  sendMode,
   slideFrame,
   slidesInOrder,
   writingSlideId,
@@ -191,7 +192,20 @@ function acts(i, total, slide) {
     return b;
   };
   bar.append(
-    el("span", {}, el("kbd", { textContent: "e" }), " editar"),
+    // S8a (artboard 05): once the slide is written, its content is edited on the slide;
+    // the outline row keeps the structural actions.
+    slide.status === "pending"
+      ? el("span", {}, el("kbd", { textContent: "e" }), " editar")
+      : (() => {
+          const go = el("button", { type: "button" }, "→ editar en la diapositiva");
+          go.dataset.act = "edit-slide";
+          go.title = `Editar el contenido de esta diapositiva (doble clic sobre un texto)`;
+          go.addEventListener("click", (event) => {
+            event.stopPropagation();
+            select(i, { slideMode: true });
+          });
+          return go;
+        })(),
     button("subir", "↑", "up", () => move(i, -1), i === 0),
     button("bajar", "↓", "down", () => move(i, 1), i === total - 1),
     button("combinar", "m", "merge", () => merge(i), i === total - 1),
@@ -226,7 +240,7 @@ function foot(slides) {
 
 // ---------- selection and keyboard (S5) ----------
 
-export function select(i, { focusTitle = false, focusRow = true } = {}) {
+export function select(i, { focusTitle = false, focusRow = true, slideMode = false } = {}) {
   const slide = slidesInOrder()[i];
   if (!slide) return;
   const changed = app.current !== slide.id;
@@ -235,6 +249,13 @@ export function select(i, { focusTitle = false, focusRow = true } = {}) {
   // Selecting from the structure always opens the text-only wireframe (S7); the real slide is one click away.
   if (viewChanged) applyView("wire");
   if (changed || focusTitle || viewChanged) render();
+  // slideMode jumps straight into the written slide with edit mode on (S8a).
+  if (slideMode && slide.status !== "pending") {
+    applyView("slide");
+    app.mode = "edit";
+    render();
+    sendMode(document.querySelector("#stage .frame.big iframe"), "edit");
+  }
   const box = document.querySelector(`#outline .row[data-slide-id="${CSS.escape(slide.id)}"]`);
   if (focusTitle) box?.querySelector(".edit")?.focus();
   else if (focusRow) box?.focus();
@@ -261,7 +282,9 @@ function onRowKey(event, i, total) {
     else selectRelative(i, step);
   } else if (key === "e") {
     event.preventDefault();
-    select(i, { focusTitle: true });
+    // S8a: for a written slide, e edits content on the slide; for a pending one it edits the plan row.
+    if (slidesInOrder()[i].status !== "pending") select(i, { slideMode: true });
+    else select(i, { focusTitle: true });
   } else if (key === "m") {
     event.preventDefault();
     merge(i);

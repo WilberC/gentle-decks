@@ -102,7 +102,26 @@ function setMode(mode) {
   app.mode = mode;
   renderTools(document.getElementById("tools"));
   renderCaption(document.getElementById("caption"));
+  renderEditFloat();
   sendMode(bigFrame, mode);
+}
+
+// S8a (artboard 05): a floating, dismissible badge states that edit mode is active, so the
+// affordances (double-click to edit, drag to move) are never a mystery.
+function renderEditFloat() {
+  const stage = document.getElementById("stage");
+  if (!stage) return;
+  document.getElementById("edit-float")?.remove();
+  if (app.view !== "slide" || app.mode !== "edit") return;
+  const badge = el(
+    "div",
+    { className: "edit-float", id: "edit-float", role: "status" },
+    el("b", { textContent: "✎ edición" }),
+    el("span", { className: "hint", textContent: "doble clic edita · arrastrá ⋮⋮ para mover · Esc sale" }),
+    el("button", { type: "button", className: "x", textContent: "×", ariaLabel: "Descartar aviso" }),
+  );
+  badge.querySelector(".x").addEventListener("click", () => badge.remove());
+  stage.append(badge);
 }
 
 function layoutSelect(slide) {
@@ -366,6 +385,7 @@ function renderSlide(stage) {
   bigFrame = box.querySelector("iframe");
   bigFrame.addEventListener("load", () => sendMode(bigFrame, app.mode));
   stage.append(box);
+  renderEditFloat();
 }
 
 function renderGrid(stage) {
@@ -404,7 +424,7 @@ function renderGrid(stage) {
 const HINTS = {
   view: ["Ver", "elige Comentar o Editar para trabajar sobre la diapositiva"],
   comment: ["Comentar", "clic en un elemento de la diapositiva"],
-  edit: ["Editar", "clic en un texto y escribe · se guarda en el markdown"],
+  edit: ["Editar", "doble clic en un texto y escribe · arrastrá para pedir un movimiento · se guarda en el markdown"],
 };
 
 export function renderCaption(caption) {
@@ -451,6 +471,17 @@ export async function onSlideMessage(id, msg, frame) {
     }
     return;
   }
+  // S8a (artboard 05): a drag in edit mode asks the agent to move the element; the drag is
+  // already deliberate, so the request posts straight away with its selector and excerpt.
+  if (msg.type === "gd:move" && app.mode === "edit") {
+    await postRequest({
+      kind: "move",
+      slideId: id,
+      selector: String(msg.selector ?? "").slice(0, 500),
+      excerpt: typeof msg.excerpt === "string" ? msg.excerpt.slice(0, 160) : "",
+    }, "Pedí al agente que mueva ese elemento.");
+    return;
+  }
   if (msg.type !== "gd:edit" || app.mode !== "edit") return;
   const before = String(msg.before ?? "").trim();
   const after = String(msg.after ?? "").trim();
@@ -481,8 +512,15 @@ export async function onSlideMessage(id, msg, frame) {
   if (send) await postRequest({ kind: "comment", slideId: id, text: send, excerpt: before.slice(0, 300) });
 }
 
-// ← → walk the written slides while the focus is not in a field.
+// ← → walk the written slides while the focus is not in a field; Esc leaves edit mode.
 document.addEventListener("keydown", (event) => {
+  if (app.view === "slide" && event.key === "Escape" && app.mode !== "view") {
+    const target = event.target;
+    if (target instanceof Element && target.closest("input, textarea, dialog")) return;
+    event.preventDefault();
+    setMode("view");
+    return;
+  }
   if (app.view !== "slide" || event.metaKey || event.ctrlKey || event.altKey) return;
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
   const target = event.target;
