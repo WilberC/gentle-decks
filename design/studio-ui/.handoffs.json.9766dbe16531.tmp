@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "chosen": "05-workspace-edit.html",
+  "handoffs": {
+    "05-workspace-edit.html": {
+      "status": "implemented",
+      "queued": false,
+      "sentAt": "2026-11-04T00:21:50.254Z",
+      "startedAt": "2026-11-04T00:22:37.777Z",
+      "implementedAt": "2026-11-04T00:36:24.696Z",
+      "feature": "odd/tasks/issue-batch-1.md",
+      "previewUrl": "http://127.0.0.1:45341/Lx9Mlp9HiUaTOEfx7LoNNljGkVl-bvpy/d/studio-ui/"
+    }
+  }
+}
