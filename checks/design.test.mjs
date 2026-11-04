@@ -179,6 +179,16 @@ test("-o still writes the single navigable deck unchanged", () => {
   assert.equal(fs.readFileSync(out, "utf8"), committed);
 });
 
+test("external links open in a new tab so exports keep cited resources (S9b)", () => {
+  const dir = tmp();
+  const deck = DECK.replace("Body", "Fuente: [Python docs](https://docs.python.org/3/)");
+  const out = path.join(dir, "out.html");
+  const r = run(writeDeck(dir, deck), "-o", out);
+  assert.equal(r.code, 0, r.stderr);
+  const html = fs.readFileSync(out, "utf8");
+  assert.match(html, /<a target="_blank" rel="noopener noreferrer" href="https:\/\/docs\.python\.org\/3\/">/);
+});
+
 test("missing output target prints usage and exits 2", () => {
   const r = run(SAMPLE);
   assert.equal(r.code, 2);

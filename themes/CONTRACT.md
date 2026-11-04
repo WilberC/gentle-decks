@@ -11,7 +11,9 @@ below; a theme missing one fails the check.
 - Self-contained: no `@import`, `url(http…)`, remote fonts, or images. System
   font stacks only.
 - The deck must work at 1600×900 (design artboards and print) and on phones.
-- `@media print` lays out one slide per page at 1600×900.
+- `@media print` lays out one slide per page at 1600×900. Keep print output crisp:
+  drop decorative shadows and blur-heavy effects there — the browser rasterizes
+  them at low print DPI and the export reads as blurry next to the web preview.
 - `prefers-reduced-motion` disables slide transitions and decorative motion.
 - WCAG AA contrast for text on its background.
 - Vertical rhythm: set a block gap on `.slide` (about 2vh). Themes reset

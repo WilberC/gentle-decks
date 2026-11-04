@@ -151,6 +151,16 @@
     true,
   );
 
+  // Previews are sandboxed: never navigate the artboard away through a content link.
+  document.addEventListener(
+    "click",
+    (event) => {
+      const link = event.target.closest && event.target.closest("a[href]");
+      if (link) event.preventDefault();
+    },
+    true,
+  );
+
   // Double-click is the announced affordance for editing text on the slide (artboard 05).
   document.addEventListener(
     "dblclick",

@@ -82,7 +82,7 @@ async function readJson(req) {
 const newRequestId = () => crypto.randomBytes(6).toString("hex");
 
 // File fingerprints used to decide whether to report a change; the rev is only computed on a change.
-const PRESENT_CSP = "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:";
+const PRESENT_CSP = "sandbox allow-scripts allow-popups; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:";
 
 // Theme dirs the studio watches: the deck's own, then the user's (see FORMAT.md, "Themes").
 const watchedThemeDirs = (paths) => [paths.themes, userThemesDir()];

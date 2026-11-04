@@ -1090,7 +1090,7 @@ test("present is sandboxed like the artboards and keeps the -o bytes (F1)", asyn
   assert.equal(r.status, 200);
   assert.equal(
     r.headers.get("content-security-policy"),
-    "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
+    "sandbox allow-scripts allow-popups; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
   );
   const out = path.join(dir, "out.html");
   const built = spawnSync(process.execPath, [CLI, deckFile(dir), "-o", out], { encoding: "utf8" });

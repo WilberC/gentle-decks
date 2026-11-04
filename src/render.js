@@ -23,7 +23,10 @@ function md(text) {
 function postProcess(html) {
   return html
     .replace(/<blockquote>\s*<p>([\s\S]*?)<\/p>\s*<\/blockquote>/g, '<p class="quote">$1</p>')
-    .replace(/<table>([\s\S]*?)<\/table>/g, '<div class="table-wrap"><table>$1</table></div>');
+    .replace(/<table>([\s\S]*?)<\/table>/g, '<div class="table-wrap"><table>$1</table></div>')
+    // Cited resources survive every export: external links open in a new tab instead of
+    // navigating away from (or being blocked by) the presentation sandbox.
+    .replace(/<a href="(https?:[^"]*)"/g, '<a target="_blank" rel="noopener noreferrer" href="$1"');
 }
 
 function stripSingleP(html) {
