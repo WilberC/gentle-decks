@@ -79,8 +79,11 @@ Read its `FORMAT.md` before writing the first slide of a session.
      `decks/<slug>/themes/draft-<name>.css` (it does not need to pass the full
      contract yet), render real sample slides with it —
      `decks <deck.md> --design design/<slug> --theme decks/<slug>/themes/draft-<name>.css`
-     — open the directions on the gentle-design canvas, and let the user
-     comment on the actual slides. Apply the comments to the draft CSS and
+     — open the directions on the gentle-design canvas, save the canvas URL the
+     tool returns into the studio (`PUT api/canvas` with `{ "url": ... }` on the
+     studio origin, or tell the user to paste it once in Estilo's **Ver en
+     gentle design**) so the user can reach the canvas from the decks tab and
+     come back, and let the user comment on the actual slides. Apply the comments to the draft CSS and
      re-render until the user picks one; then rename the draft to its final
      name, run `theme check decks/<slug>/themes/<name>.css` until it prints
      `ok`, and offer **Guardar como mío** in the studio. Apply the current
@@ -208,7 +211,9 @@ never generic labels such as "Beginners" without saying beginners at what.
 
 The studio is the default preview. When the user prefers the gentle-design
 canvas, build with `--design design/<slug>` and open it with the `gentle_design`
-tool (`action: "open"`).
+tool (`action: "open"`), then save the returned canvas URL into the studio
+(`PUT api/canvas`, body `{ "url": "<loopback url with token>" }`) so **Ver en
+gentle design ↗** in Estilo works without the user pasting anything.
 
 
 Comments live in `design/<slug>/comments.json`. Each comment's `file` is a slide

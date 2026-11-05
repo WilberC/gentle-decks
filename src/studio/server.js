@@ -13,6 +13,7 @@ import { editSlideText } from "./edit.js";
 import {
   deckRev,
   openRequests,
+  readCanvasUrl,
   readOrCreateStudioToken,
   readDeck,
   readPlanDocument,
@@ -21,6 +22,7 @@ import {
   resolvedRequests,
   slideStates,
   studioPaths,
+  validateCanvasUrl,
   validateRequest,
   writeAtomic,
   writeRequests,
@@ -37,6 +39,12 @@ const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const LOOPBACK = "127.0.0.1";
 const POLL_MS = 250;
 const HEARTBEAT_MS = 15000;
+// S1 (design-view-integration): the gentle-design canvas is another loopback app the agent opens, and
+// its CSP (`frame-ancestors 'none'`) forbids framing it, so the studio only offers a link to it. This
+// probe decides whether that link still answers as the canvas, so a dead link is never offered.
+const CANVAS_PROBE_MS = 700;
+const CANVAS_HTML_MAX = 64 * 1024;
+const CANVAS_MARKERS = [/id="gd-config"/, /<title>Gentle Design<\/title>/i];
 const SLIDE_ROUTE = /^slides\/([a-z][a-z0-9-]*)\.html$/;
 const TEXT_ROUTE = /^api\/slides\/([a-z][a-z0-9-]*)\/text$/;
 // S3: only a theme name is deletable, so the route itself can never name a path.
@@ -242,20 +250,75 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     res.end(html);
   }
 
+  // The stored canvas link travels with the state; whether it answers is asked on api/canvas (S1).
   function serveState(res) {
     const plan = readPlanDocument(paths);
     if (plan.problems) return json(res, 500, { error: "plan", problems: plan.problems });
     const deck = readDeck(paths);
+    // S1: the stored canvas link, so the Estilo view can offer it without asking another server.
+    const canvas = readCanvasUrl(paths);
     return json(res, 200, {
       rev: deckRev(paths),
       slug: path.basename(paths.dir),
       plan: plan.plan,
       themes: listThemes(paths.dir),
       mine: userThemeNames(),
+      canvas: canvas ? { url: canvas } : null,
       deck: { exists: Boolean(deck), slides: slideStates(plan.plan, deck) },
       requests: openRequests(paths),
       resolved: resolvedRequests(paths),
     });
+  }
+
+  // S1: the canvas link is stored state like the studio token; whether it answers is asked on its own
+  // route, so api/state never waits on another server. Only the first 64 KB are read, and the page
+  // must carry the canvas markers, so any other loopback page is reported as "not the canvas".
+  async function canvasResponds(url) {
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(CANVAS_PROBE_MS),
+        redirect: "manual",
+        headers: { Accept: "text/html" },
+      });
+      if (!res.ok) return false;
+      if (!String(res.headers.get("content-type") ?? "").toLowerCase().startsWith("text/html")) return false;
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of res.body ?? []) {
+        chunks.push(chunk);
+        size += chunk.length;
+        if (size >= CANVAS_HTML_MAX) break;
+      }
+      const html = Buffer.concat(chunks).toString("utf8");
+      return CANVAS_MARKERS.some((marker) => marker.test(html));
+    } catch {
+      return false;
+    }
+  }
+
+  async function serveCanvas(req, res) {
+    req.resume();
+    const url = readCanvasUrl(paths);
+    return json(res, 200, { url, running: url ? await canvasResponds(url) : false });
+  }
+
+  // S1: the canvas URL is validated before it is stored: a loopback origin with a token path only.
+  async function putCanvas(req, res) {
+    const body = await readJson(req);
+    if (body.tooLarge) return json(res, 413, { error: "too-large" });
+    if (body.invalid) return json(res, 422, { error: "invalid", problems: ["$: invalid JSON"] });
+    const value = body.value && typeof body.value === "object" ? body.value : {};
+    const url = validateCanvasUrl(value.url);
+    if (!url) {
+      return json(res, 422, {
+        error: "invalid",
+        problems: [
+          "$.url: must be a loopback http(s) URL with the canvas token path, such as http://127.0.0.1:1234/<token>/",
+        ],
+      });
+    }
+    writeAtomic(paths.canvas, `${url}\n`);
+    return json(res, 200, { url, running: await canvasResponds(url) });
   }
 
   // S11: `event: change` whenever the deck state changes, plus a comment heartbeat.
@@ -449,12 +512,14 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
         return serveFile(res, path.join(studioDir, file));
       }
       if (route === "api/state") return serveState(res);
+      if (route === "api/canvas") return serveCanvas(req, res);
       if (route === "api/events") return serveEvents(req, res);
       if (route === "present") return servePresent(res);
       if (route === "export") return serveExport(res);
       const slide = route.match(SLIDE_ROUTE);
       if (slide) return serveArtboard(res, url, slide[1]);
     }
+    if (req.method === "PUT" && route === "api/canvas") return putCanvas(req, res);
     if (req.method === "PUT" && route === "api/plan") return putPlan(req, res);
     if (req.method === "POST" && route === "api/requests") return postRequest(req, res);
     if (req.method === "POST" && route === "api/references") return postReference(req, res);

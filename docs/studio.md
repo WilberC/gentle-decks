@@ -20,7 +20,7 @@ It prints `studio: http://127.0.0.1:<port>/<token>/`. The studio listens only on
 | Area | What you do there |
 | --- | --- |
 | **Outline** (left, always visible) | See every slide with its thumbnail, status (`pendiente`, `escribiendo…`, `lista`, `no cabe`) and open comments. Edit text, add, merge, move, delete, or comment in place. |
-| **Center** | **Estilo**: theme previews rendered with your outline, **✦ Proponer estilo**, and Generate; click a style to open its detail (big preview, component examples, choose / comment / improve). **Mis estilos**: your own themes with Elegir / Borrar, and this deck's proposals with **Guardar como mío**. **Slide**: the selected slide with Ver / Comentar / Editar modes, a layout switch and an overflow warning. **Grid**: every slide, filling in live as the agent writes. |
+| **Center** | **Estilo**: theme previews rendered with your outline, **✦ Proponer estilo**, and Generate; click a style to open its detail (big preview, component examples, choose / comment / improve). **Ver en gentle design ↗** opens the canvas in its own tab once its URL is saved (see below). **Mis estilos**: your own themes with Elegir / Borrar, and this deck's proposals with **Guardar como mío**. **Slide**: the selected slide with Ver / Comentar / Editar modes, a layout switch and an overflow warning. **Grid**: every slide, filling in live as the agent writes. |
 | **Comments** (right) | One thread per slide. The agent answers in the same thread. |
 
 Keyboard shortcuts on the focused outline row: `e` edit, `↑↓` select,
@@ -90,3 +90,23 @@ overwrites the user's copy. `Borrar` removes only your copy: a deck theme or a
 bundled theme with that name is never touched, and deleting the chosen style
 (`plan.theme`) stops the previews from resolving until you choose another one.
 Bundled themes are read-only and are not listed there.
+
+## Canvas de gentle design
+
+The visual workshop designs a theme on the gentle-design canvas. The canvas runs
+on its own loopback port, and its page refuses to be framed
+(`frame-ancestors 'none'`), so the studio cannot embed it: instead the studio
+stays the home and links to it. **Estilo** shows **Ver en gentle design ↗**,
+which opens the canvas in another tab; closing that tab returns to the studio
+with the deck, the view and the comment drafts exactly as they were.
+
+The URL is the one the agent prints when it opens the canvas
+(`http://127.0.0.1:<port>/<token>/…`). Paste it into the dialog once: the studio
+keeps it in `.studio-canvas` next to `plan.json`, for that deck. Only loopback
+`http(s)` URLs with the canvas token path are accepted.
+
+Before offering the link the studio asks the canvas whether it still answers.
+When it does not — the canvas was closed, or restarted with a new token — the
+action becomes a plain button that asks for the URL again, with the reason in
+place (no dead link, nothing embedded). **cambiar URL** replaces a saved link,
+and **comprobar** asks again.

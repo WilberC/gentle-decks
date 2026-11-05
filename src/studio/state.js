@@ -13,7 +13,12 @@ export const REQUESTS_FILE = "requests.json";
 export const TOKEN_FILE = ".studio-token";
 // S15: the server records its pid so `decks studio stop` can shut it down after approval.
 export const PID_FILE = ".studio-pid";
+// S1 (design-view-integration): the gentle-design canvas runs on its own loopback port with a random
+// token, so the studio can only link to it once the agent's URL was pasted; it is kept per deck.
+export const CANVAS_FILE = ".studio-canvas";
 const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
+// The canvas only ever listens on loopback: anything else is neither offered nor probed.
+const CANVAS_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 // S8: a request may carry a reply (string, at most 2000 characters) and when it was written.
 export const MAX_REPLY = 2000;
 // S8: api/state keeps only the most recent resolved requests browsable.
@@ -31,6 +36,7 @@ export function studioPaths(dir) {
     requests: path.join(root, REQUESTS_FILE),
     token: path.join(root, TOKEN_FILE),
     pid: path.join(root, PID_FILE),
+    canvas: path.join(root, CANVAS_FILE),
     themes: path.join(root, "themes"),
   };
 }
@@ -59,6 +65,32 @@ export function readOrCreateStudioToken(paths) {
   const token = crypto.randomBytes(24).toString("base64url");
   writeAtomic(paths.token, `${token}\n`);
   return token;
+}
+
+// S1: a canvas link is a loopback http(s) URL with the canvas's token path, normalized to origin and
+// path (`?from=chat#artboard` from a chat message is dropped). Anything else is null, never a link.
+export function validateCanvasUrl(value) {
+  if (typeof value !== "string") return null;
+  let url;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (url.username || url.password) return null;
+  if (!CANVAS_HOSTS.has(url.hostname)) return null;
+  if (url.pathname.length <= 1) return null;
+  return `${url.origin}${url.pathname}`;
+}
+
+// The saved canvas URL, or null when the deck has none. A corrupt or hand-edited file is ignored.
+export function readCanvasUrl(paths) {
+  try {
+    return validateCanvasUrl(fs.readFileSync(paths.canvas, "utf8"));
+  } catch {
+    return null;
+  }
 }
 
 function readBytes(file) {
