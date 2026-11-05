@@ -34,6 +34,7 @@ export const app = {
   dirty: false, // a re-render waits for the user to leave a field
   live: "connecting", // SSE state: "connecting" | "on" | "off"
   themesRev: null, // last themes fingerprint from api/events
+  canvasLive: null, // S1 design view: { url, running } from GET api/canvas (null until probed)
 };
 
 // ---------- small DOM helpers ----------
@@ -159,6 +160,23 @@ export function ask({ title, hint = "", value = "", ok = "Enviar", text = true, 
       { once: true },
     );
   });
+}
+
+// ---------- the gentle-design canvas (S1, design-view-integration) ----------
+
+// The canvas runs on its own loopback port, so only a loopback http(s) URL with its token path is
+// accepted. The server validates again; this check keeps an obviously wrong paste from reaching it.
+export function isCanvasUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value).trim());
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  if (url.username || url.password) return false;
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) return false;
+  return url.pathname.length > 1;
 }
 
 // ---------- routing (S3) ----------

@@ -4,6 +4,7 @@
 // comments), and checks the files on disk.
 import { spawn, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
@@ -67,12 +68,15 @@ const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;
 const pending = new Map();
+// Page exceptions are collected so a step can prove it added none (S1 design view).
+const exceptions = [];
 ws.addEventListener("message", (e) => {
   const msg = JSON.parse(e.data);
   if (msg.id && pending.has(msg.id)) {
     pending.get(msg.id)(msg);
     pending.delete(msg.id);
   }
+  if (msg.method === "Runtime.exceptionThrown") exceptions.push(msg.params?.exceptionDetails?.text ?? "exception");
 });
 const send = (method, params = {}) => new Promise((resolve) => {
   const id = ++seq;
@@ -116,6 +120,8 @@ const requests = () => {
   try { return JSON.parse(fs.readFileSync(path.join(deckDir, "requests.json"), "utf8")).requests; } catch { return []; }
 };
 const results = [];
+// The stub gentle-design canvas the S1 design-view step opens and then closes.
+let stubCanvas = null;
 const check = (name, ok, detail = "") => {
   results.push(`${ok ? "ok  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
 };
@@ -150,6 +156,7 @@ const selectedAct = (act) => `.outline .row[aria-current="true"] [data-act="${ac
 
 try {
   await send("Page.enable");
+  await send("Runtime.enable");
   // The picker's OS dialog is not the studio's: intercept it so headless never waits on it.
   await send("Page.setInterceptFileChooserDialog", { enabled: true }).catch(() => {});
   await send("Page.navigate", { url });
@@ -310,6 +317,86 @@ try {
   // The detail is a stage inside Estilo: go back so Generate stays reachable.
   await click("#theme-back");
   await until(`!!document.querySelector("#generate")`, "Estilo card list after the theme detail");
+
+  // S1 (design-view-integration): the gentle-design canvas runs on its own loopback port and its CSP
+  // forbids framing, so the studio never embeds it: Estilo offers “Ver en gentle design” in another
+  // tab, states how to come back, and this tab keeps the deck, the view and the drafts.
+  const canvasPage = (stubCanvas = http.createServer((req, res) => {
+    req.resume();
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end('<!doctype html><html><head><title>Gentle Design</title><script id="gd-config" type="application/json">{}</script></head><body></body></html>');
+  }));
+  await new Promise((resolve) => canvasPage.listen(0, "127.0.0.1", resolve));
+  const canvasUrl = `http://127.0.0.1:${canvasPage.address().port}/tok3n/d/demo/`;
+  check(
+    "Estilo offers “Ver en gentle design” without embedding the canvas (S1)",
+    (await js(`document.getElementById("design-open")?.tagName === "BUTTON"`)) &&
+      (await js(`document.getElementById("design-note").textContent.includes("gentle design")`)) &&
+      (await js(`[...document.querySelectorAll("iframe")].every((f) => !f.src.includes("127.0.0.1:${canvasPage.address().port}"))`)),
+  );
+  // Without a saved URL the action asks for it; cancelling stores nothing.
+  await click("#design-open");
+  await js(`document.getElementById("dialog").close(""); true`);
+  await sleep(300);
+  check(
+    "the canvas action sends nothing when cancelled (S1)",
+    !fs.existsSync(path.join(deckDir, ".studio-canvas")) && (await js(`document.getElementById("design-open").tagName === "BUTTON"`)),
+  );
+  await click("#design-open");
+  await answerDialog(canvasUrl);
+  await until(`document.getElementById("design-open")?.tagName === "A"`, "canvas link after saving its URL");
+  const designLink = await js(`(() => {
+    const n = document.getElementById("design-open");
+    return { href: n.getAttribute("href"), target: n.getAttribute("target"), rel: n.getAttribute("rel"), note: document.getElementById("design-note").textContent };
+  })()`);
+  check(
+    "the saved canvas opens in another tab with the way back to decks (S1)",
+    designLink.href === canvasUrl &&
+      designLink.target === "_blank" &&
+      String(designLink.rel).includes("noopener") &&
+      designLink.note.includes("volvés a decks") &&
+      fs.readFileSync(path.join(deckDir, ".studio-canvas"), "utf8").trim() === canvasUrl,
+    `${designLink.href} | ${designLink.target} | ${designLink.note.slice(0, 60)}`,
+  );
+  // The round trip: the link opens the canvas in its own tab and this tab keeps deck, view and draft.
+  await setValue("#compose", "Borrador antes del canvas");
+  const studioBefore = await js(`({
+    href: location.href,
+    view: document.querySelector('#tools [data-view][aria-pressed="true"]').dataset.view,
+    deck: document.getElementById("deck-title").textContent,
+  })`);
+  const errorsBefore = exceptions.length;
+  await click("#design-open");
+  await sleep(900);
+  const studioAfter = await js(`({
+    href: location.href,
+    view: document.querySelector('#tools [data-view][aria-pressed="true"]').dataset.view,
+    deck: document.getElementById("deck-title").textContent,
+    draft: document.getElementById("compose").value,
+  })`);
+  check(
+    "the design round trip keeps deck, view and composer draft (S1)",
+    studioAfter.href === studioBefore.href &&
+      studioAfter.view === studioBefore.view &&
+      studioAfter.deck === studioBefore.deck &&
+      studioAfter.draft === "Borrador antes del canvas" &&
+      exceptions.length === errorsBefore,
+    JSON.stringify(studioAfter),
+  );
+  // The canvas closes: the studio keeps working and never offers a dead link.
+  await new Promise((resolve) => canvasPage.close(resolve));
+  await send("Page.navigate", { url });
+  await until(`!!document.querySelector(".look .theme")`, "Estilo view after reloading without a canvas");
+  await until(`document.getElementById("design-open")?.tagName === "BUTTON"`, "dead canvas is not a link");
+  const deadCanvas = await js(`({
+    note: document.getElementById("design-note").textContent,
+    check: !!document.getElementById("design-check"),
+  })`);
+  check(
+    "a canvas that stopped answering degrades to a hint, not a dead link (S1)",
+    deadCanvas.note.includes("no responde") && deadCanvas.check,
+    deadCanvas.note.slice(0, 70),
+  );
 
   // S3: "Mis estilos" manages my own themes: save the deck's proposal as mine, then delete it.
   await click('#tools [data-view="mine"]');
@@ -534,6 +621,7 @@ try {
   ws.close();
   browser.kill();
   studio.kill();
+  stubCanvas?.close();
   setTimeout(() => {
     fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5 });
     fs.rmSync(work, { recursive: true, force: true });

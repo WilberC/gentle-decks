@@ -13,7 +13,7 @@ import {
   viewFromHash,
 } from "./ui-core.js";
 import { renderOutline } from "./ws-outline.js";
-import { renderCenter, renderCaption, onSlideMessage, resetCenter } from "./ws-center.js";
+import { renderCenter, renderCaption, onSlideMessage, resetCenter, syncCanvas } from "./ws-center.js";
 import { renderComments } from "./ws-comments.js";
 
 export * from "./ui-core.js";
@@ -235,6 +235,9 @@ export async function refresh() {
   if (!(await loadState())) return;
   if (!app.chosenView) app.view = defaultView();
   render();
+  // S1: the canvas link is probed in the background, so api/state never waits on another server and
+  // a studio without a canvas paints immediately.
+  void syncCanvas();
 }
 
 // ---------- live updates (S11) ----------
