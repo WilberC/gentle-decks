@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONTAINER_NAMES } from "../render.js";
 import { validatePlan } from "../plan.js";
-import { listThemes, userThemesDir } from "../theme.js";
+import { listThemes, userThemesDir, THEME_NAME } from "../theme.js";
 import { artboardHtml, presentHtml } from "./build.js";
 import { editSlideText } from "./edit.js";
 import {
@@ -39,6 +39,8 @@ const POLL_MS = 250;
 const HEARTBEAT_MS = 15000;
 const SLIDE_ROUTE = /^slides\/([a-z][a-z0-9-]*)\.html$/;
 const TEXT_ROUTE = /^api\/slides\/([a-z][a-z0-9-]*)\/text$/;
+// S3: only a theme name is deletable, so the route itself can never name a path.
+const MINE_ROUTE = /^api\/themes\/mine\/([a-z0-9][a-z0-9-]*)$/;
 const ASSET = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -94,6 +96,21 @@ const PRESENT_CSP = "sandbox allow-scripts allow-popups; default-src 'none'; sty
 
 // Theme dirs the studio watches: the deck's own, then the user's (see FORMAT.md, "Themes").
 const watchedThemeDirs = (paths) => [paths.themes, userThemesDir()];
+
+// S3: the user's own theme names, whether or not a deck theme shadows them: listThemes() hides a
+// user theme whose name a deck theme already uses, but "Mis estilos" must still show and delete it.
+function userThemeNames() {
+  let entries;
+  try {
+    entries = fs.readdirSync(userThemesDir());
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((name) => name.endsWith(".css") && THEME_NAME.test(name.slice(0, -4)))
+    .map((name) => name.slice(0, -4))
+    .sort();
+}
 
 // sha256 over deck and user theme names and contents, so the UI repaints on theme-only edits (F2).
 function themesRev(paths) {
@@ -234,6 +251,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       slug: path.basename(paths.dir),
       plan: plan.plan,
       themes: listThemes(paths.dir),
+      mine: userThemeNames(),
       deck: { exists: Boolean(deck), slides: slideStates(plan.plan, deck) },
       requests: openRequests(paths),
       resolved: resolvedRequests(paths),
@@ -300,6 +318,45 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     return json(res, 200, { reference: `references/${stored}` });
   }
 
+  // S3: a theme this deck proposed becomes the user's own, so it survives the deck. Only a
+  // deck-local theme can be promoted: bundled and already-user themes answer 404. Copying over an
+  // existing file is deliberate, so promoting twice is idempotent.
+  async function postThemePromote(req, res) {
+    const body = await readJson(req);
+    if (body.tooLarge) return json(res, 413, { error: "too-large" });
+    if (body.invalid) return json(res, 422, { error: "invalid", problems: ["$: invalid JSON"] });
+    const value = body.value && typeof body.value === "object" ? body.value : {};
+    const theme = typeof value.theme === "string" ? value.theme : "";
+    if (!THEME_NAME.test(theme)) {
+      return json(res, 422, { error: "invalid", problems: [`$.theme: must match ${THEME_NAME.source}`] });
+    }
+    let css;
+    try {
+      css = fs.readFileSync(path.join(paths.themes, `${theme}.css`));
+    } catch {
+      return json(res, 404, { error: "not-found" });
+    }
+    const target = path.join(userThemesDir(), `${theme}.css`);
+    writeAtomic(target, css);
+    return json(res, 200, { promoted: target });
+  }
+
+  // S3: only the user's copy is deletable. The name is a theme name (never a path) and the file
+  // must exist in the user themes dir, so a deck or bundled theme answers 404 and stays untouched.
+  function deleteMineTheme(req, res, name) {
+    req.resume();
+    const file = path.join(userThemesDir(), `${name}.css`);
+    let stat;
+    try {
+      stat = fs.statSync(file);
+    } catch {
+      return json(res, 404, { error: "not-found" });
+    }
+    if (!stat.isFile()) return json(res, 404, { error: "not-found" });
+    fs.unlinkSync(file);
+    return json(res, 200, { deleted: name });
+  }
+
   // S9: validates and appends one request, prints the bridge line, and dedupes open overflow reports.
   async function postRequest(req, res) {
     const body = await readJson(req);
@@ -360,6 +417,8 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
       req.resume();
       return json(res, 403, { error: "forbidden" });
     }
+    // Every non-GET route, DELETE included, must be same-origin JSON: a cross-site form or fetch
+    // can neither forge the Origin nor send that content type without a preflight.
     if (req.method !== "GET") {
       if (req.headers.origin !== `http://${LOOPBACK}:${port()}`) {
         req.resume();
@@ -399,6 +458,9 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     if (req.method === "PUT" && route === "api/plan") return putPlan(req, res);
     if (req.method === "POST" && route === "api/requests") return postRequest(req, res);
     if (req.method === "POST" && route === "api/references") return postReference(req, res);
+    if (req.method === "POST" && route === "api/themes/promote") return postThemePromote(req, res);
+    const mine = route.match(MINE_ROUTE);
+    if (req.method === "DELETE" && mine) return deleteMineTheme(req, res, mine[1]);
     const text = route.match(TEXT_ROUTE);
     if (req.method === "PUT" && text) return putText(req, res, text[1]);
     return notFound(req, res);

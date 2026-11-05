@@ -26,9 +26,20 @@ if (!EDGE) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "decks-smoke-"));
 const deckDir = path.join(work, "python-intro");
 fs.mkdirSync(deckDir);
+// S3: this deck proposes its own theme and the studio gets an isolated user themes dir, so
+// "Mis estilos" can be exercised without reading or writing the developer's ~/.config.
+const userThemes = path.join(work, "user-themes");
+fs.mkdirSync(userThemes);
+fs.mkdirSync(path.join(deckDir, "themes"));
+// The deck's proposal is a copy of a bundled theme, so the slides it renders keep a real layout.
+const DECK_THEME_FILE = path.join(deckDir, "themes", "studio.css");
+fs.copyFileSync(path.resolve("themes", "fair-test.css"), DECK_THEME_FILE);
 const format = fs.readFileSync("FORMAT.md", "utf8");
 fs.writeFileSync(path.join(deckDir, "plan.json"), format.split("## Plan file")[1].split("```json")[1].split("```")[0].trimStart());
-const studio = spawn(process.execPath, [CLI, "studio", deckDir], { stdio: ["ignore", "pipe", "inherit"] });
+const studio = spawn(process.execPath, [CLI, "studio", deckDir], {
+  stdio: ["ignore", "pipe", "inherit"],
+  env: { ...process.env, GENTLE_DECKS_THEMES: userThemes },
+});
 const url = await new Promise((resolve, reject) => {
   let out = "";
   studio.stdout.on("data", (d) => {
@@ -299,6 +310,37 @@ try {
   // The detail is a stage inside Estilo: go back so Generate stays reachable.
   await click("#theme-back");
   await until(`!!document.querySelector("#generate")`, "Estilo card list after the theme detail");
+
+  // S3: "Mis estilos" manages my own themes: save the deck's proposal as mine, then delete it.
+  await click('#tools [data-view="mine"]');
+  await until(`document.querySelector('#tools [data-view="mine"]').getAttribute("aria-pressed") === "true"`, "Mis estilos view");
+  check(
+    "Mis estilos shows the empty state and the deck's proposal (S3)",
+    (await js(`!!document.getElementById("mine-empty")`)) && (await js(`!!document.getElementById("mine-promote-studio")`)),
+  );
+  await click("#mine-promote-studio");
+  await until(`!!document.getElementById("mine-choose-studio")`, "promoted theme listed under mine");
+  check(
+    "Guardar como mío copies the deck theme into the user themes dir (S3)",
+    fs.existsSync(path.join(userThemes, "studio.css")) && !(await js(`!!document.getElementById("mine-empty")`)),
+  );
+  await click("#mine-delete-studio");
+  await until(`document.getElementById("dialog").open`, "delete confirmation");
+  const deleteHint = await js(`document.getElementById("dialog-hint").textContent`);
+  await js(`document.getElementById("dialog-ok").click(); true`);
+  await until(`!document.getElementById("mine-choose-studio")`, "theme removed from mine");
+  check(
+    "Borrar removes only my copy and keeps the deck theme (S3)",
+    !fs.existsSync(path.join(userThemes, "studio.css")) && fs.existsSync(DECK_THEME_FILE),
+    deleteHint.slice(0, 70),
+  );
+  await until(`!!document.querySelector(".mine .theme .frame iframe")`, "deck proposal preview still renders");
+  check(
+    "the deck proposal is still listed after deleting my copy (S3)",
+    await js(`!!document.getElementById("mine-promote-studio")`),
+  );
+  await click('#tools [data-view="style"]');
+  await until(`!!document.querySelector("#generate")`, "Estilo card list before generating");
 
   // Generate.
   await click("#generate");

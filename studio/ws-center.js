@@ -13,6 +13,7 @@ import {
   savePlan,
   sendMode,
   setView,
+  refresh,
   slideFrame,
   slideUrl,
   slidesInOrder,
@@ -71,7 +72,13 @@ function renderTools(tools) {
   if (!tools) return;
   tools.replaceChildren();
   tools.append(
-    segment("Vista", "view", [["style", "Estilo"], ["wire", "Boceto"], ["slide", "Slide"], ["grid", "Grid"]], app.view, (view) => {
+    segment("Vista", "view", [
+      ["style", "Estilo"],
+      ["wire", "Boceto"],
+      ["slide", "Slide"],
+      ["grid", "Grid"],
+      ["mine", "Mis estilos"],
+    ], app.view, (view) => {
       // S11: picking Estilo returns to the card list, never to a theme opened earlier.
       if (view === "style") app.theme = null;
       setView(view);
@@ -93,6 +100,7 @@ function renderTools(tools) {
         app.view === "slide" ? "← → cambiar diapositiva"
         : app.view === "grid" ? "clic para abrir en Slide"
         : app.view === "wire" ? "boceto de solo texto, sin estilos ni tokens"
+        : app.view === "mine" ? "solo tus estilos: el deck y las plantillas no se tocan"
         : "las vistas previas usan tu estilo",
     }),
   );
@@ -157,6 +165,7 @@ function renderStage(stage) {
   stage.replaceChildren();
   stage.className = "stage";
   if (app.view === "style") return renderStyle(stage);
+  if (app.view === "mine") return renderMine(stage);
   if (app.view === "wire") return renderWireframe(stage);
   if (app.view === "grid") {
     stage.classList.add("grid-stage");
@@ -461,10 +470,138 @@ function themeCards() {
 
 async function chooseTheme(name) {
   app.state.plan.theme = name;
-  if (!(await savePlan())) return;
+  if (!(await savePlan())) return false;
   for (const card of document.querySelectorAll(".theme")) card.setAttribute("aria-pressed", String(card.dataset.theme === name));
   // The detail shows whether this theme is the chosen one; rebuild it in place.
   if (app.theme) renderCenter(centerEls());
+  return true;
+}
+
+// ---------- Mis estilos (S3): the user's own themes ----------
+
+// S3: name, the outline rendered with that theme, and the source label, the same card shape the
+// Estilo list uses. An <article> instead of a <button>, because a card here carries actions.
+function themeCardShell(name, label, sample) {
+  const card = el("article", { className: "theme" });
+  card.dataset.theme = name;
+  const shots = el("div", { className: "shots" });
+  sample.forEach((slide, k) => {
+    const box = slideFrame(slide.id, { theme: name, preview: true, title: `${name}: ${slide.title}` });
+    if (k === 0) box.classList.add("main");
+    shots.append(box);
+  });
+  if (!sample.length) shots.append(el("p", { className: "muted", textContent: "El esquema está vacío: agrega diapositivas para ver el estilo." }));
+  const row = el("div", { className: "name" }, el("span", { textContent: name }), el("small", { textContent: label }));
+  if (app.state.plan?.theme === name) row.append(el("span", { className: "tag", textContent: "elegido" }));
+  card.append(shots, row);
+  return card;
+}
+
+// S3: the user's themes come from api/state `mine`, not from the deduped theme list: a deck theme
+// with the same name shadows it in the lookup, yet the user's copy is still there to choose or delete.
+function renderMine(stage) {
+  const plan = app.state.plan;
+  const sample = plan.slides.slice(0, 1);
+  const mine = app.state.mine ?? [];
+  const deck = (app.state.themes ?? []).filter((theme) => theme.source === "deck");
+  const section = el(
+    "section",
+    { className: "look mine" },
+    el("div", { className: "look-head" }, el("h2", { textContent: "Mis estilos" })),
+    el("p", {
+      className: "muted",
+      textContent:
+        "Tus estilos viven en tu carpeta de temas y aparecen en todos los decks; las plantillas incluidas son de solo lectura.",
+    }),
+    mineList(sample, mine),
+  );
+  if (deck.length) {
+    section.append(
+      el("div", { className: "look-head" }, el("h2", { textContent: "Propuestos por este deck" })),
+      el("p", {
+        className: "muted",
+        textContent: "Guardalos como tuyos para que sigan disponibles cuando el deck termine.",
+      }),
+      deckList(sample, deck),
+    );
+  }
+  stage.append(section);
+}
+
+function mineList(sample, mine) {
+  const list = el("div", { className: "themes", role: "group", ariaLabel: "Mis estilos" });
+  if (!mine.length) {
+    list.append(
+      el("p", {
+        className: "muted mine-empty",
+        id: "mine-empty",
+        textContent:
+          "Todavía no guardaste ningún estilo: pedí uno con “✦ Proponer estilo” y, cuando el agente lo escriba, guardalo con “Guardar como mío”.",
+      }),
+    );
+    return list;
+  }
+  for (const name of mine) {
+    const card = themeCardShell(name, THEME_SOURCE_LABEL.user, sample);
+    card.classList.add("mine-card");
+    const choose = el("button", { type: "button", className: "btn", id: `mine-choose-${name}`, textContent: "Elegir" });
+    choose.addEventListener("click", async () => {
+      if (await chooseTheme(name)) renderCenter(centerEls());
+    });
+    const remove = el("button", { type: "button", className: "btn danger", id: `mine-delete-${name}`, textContent: "Borrar" });
+    remove.title = `Borrar tu copia de ${name}`;
+    remove.addEventListener("click", () => onDeleteMine(name));
+    card.append(el("div", { className: "mine-acts" }, choose, remove));
+    list.append(card);
+  }
+  return list;
+}
+
+function deckList(sample, deck) {
+  const list = el("div", { className: "themes", role: "group", ariaLabel: "Estilos propuestos por este deck" });
+  for (const theme of deck) {
+    const card = themeCardShell(theme.name, THEME_SOURCE_LABEL.deck, sample);
+    card.classList.add("deck-card");
+    const keep = el("button", { type: "button", className: "btn", id: `mine-promote-${theme.name}`, textContent: "Guardar como mío" });
+    keep.title = `Copiar ${theme.name} a tu carpeta de temas`;
+    keep.addEventListener("click", () => onPromoteMine(theme.name));
+    card.append(el("div", { className: "mine-acts" }, keep));
+    list.append(card);
+  }
+  return list;
+}
+
+// S3: only a deck-proposed theme can be saved; the server copies it and answers 404 for the rest.
+async function onPromoteMine(name) {
+  const r = await api("POST", "api/themes/promote", { theme: name });
+  if (!r.ok) {
+    notify(`No se pudo guardar ${name}: ${r.data?.error ?? r.status}`, "error");
+    return;
+  }
+  notify(`Guardé ${name} en tus estilos: ahora aparece en todos tus decks.`);
+  await refresh();
+}
+
+// S3: deleting the chosen style leaves plan.theme pointing at a missing file, so the confirm says
+// the previews stop resolving until another style is chosen. The deck and bundles are never touched.
+async function onDeleteMine(name) {
+  const chosen = app.state.plan?.theme === name;
+  const ok = await ask({
+    title: `Borrar ${name}`,
+    hint: chosen
+      ? "Es el estilo elegido del deck: las vistas previas dejarán de resolverse hasta que elijas otro estilo. Se borra solo tu copia; el deck y las plantillas no se tocan."
+      : "Se borra tu copia de este estilo; el deck y las plantillas no se tocan.",
+    ok: "Borrar",
+    text: false,
+  });
+  if (ok === null) return;
+  const r = await api("DELETE", `api/themes/mine/${encodeURIComponent(name)}`, {});
+  if (!r.ok) {
+    notify(`No se pudo borrar ${name}: ${r.data?.error ?? r.status}`, "error");
+    return;
+  }
+  notify(`Borré ${name} de tus estilos.`);
+  await refresh();
 }
 
 async function onGenerate() {
@@ -544,6 +681,8 @@ export function renderCaption(caption) {
     left.textContent = "Todas las diapositivas · clic en una para verla en Slide";
   } else if (app.view === "wire") {
     left.textContent = "Boceto: título y puntos tal como se generará, solo texto";
+  } else if (app.view === "mine") {
+    left.textContent = "Mis estilos: guardar y borrar trabajan solo sobre tu carpeta de temas";
   } else {
     left.textContent = "El esquema siempre queda a la izquierda · e editar · c comentar";
   }

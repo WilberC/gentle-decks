@@ -20,7 +20,7 @@ It prints `studio: http://127.0.0.1:<port>/<token>/`. The studio listens only on
 | Area | What you do there |
 | --- | --- |
 | **Outline** (left, always visible) | See every slide with its thumbnail, status (`pendiente`, `escribiendo…`, `lista`, `no cabe`) and open comments. Edit text, add, merge, move, delete, or comment in place. |
-| **Center** | **Estilo**: theme previews rendered with your outline, **✦ Proponer estilo**, and Generate; click a style to open its detail (big preview, component examples, choose / comment / improve). **Slide**: the selected slide with Ver / Comentar / Editar modes, a layout switch and an overflow warning. **Grid**: every slide, filling in live as the agent writes. |
+| **Center** | **Estilo**: theme previews rendered with your outline, **✦ Proponer estilo**, and Generate; click a style to open its detail (big preview, component examples, choose / comment / improve). **Mis estilos**: your own themes with Elegir / Borrar, and this deck's proposals with **Guardar como mío**. **Slide**: the selected slide with Ver / Comentar / Editar modes, a layout switch and an overflow warning. **Grid**: every slide, filling in live as the agent writes. |
 | **Comments** (right) | One thread per slide. The agent answers in the same thread. |
 
 Keyboard shortcuts on the focused outline row: `e` edit, `↑↓` select,
@@ -31,8 +31,8 @@ Keyboard shortcuts on the focused outline row: `e` edit, `↑↓` select,
 - Two skins: **Gentle** (default, the Gentle brand palette) and **Flat** (the
   Gentle Shell terminal palette). Switch in the header; the choice is
   remembered. `?skin=flat` forces it.
-- Append `#style`, `#slide`, or `#grid` to open a view (`#plan` and `#editor`
-  still work).
+- Append `#style`, `#mine`, `#slide`, or `#grid` to open a view (`#plan` and
+  `#editor` still work).
 
 ## How the agent sees your actions
 
@@ -81,3 +81,12 @@ slides rendered in it, the components the theme contract requires (`card`, `step
 **Mejorar este estilo** and **📎 Mejorar con referencia** queue a `propose-style`
 request for that theme, so the agent edits its CSS instead of a slide.
 **← Volver a los estilos** returns to the cards.
+
+**Mis estilos** (`#mine`): the themes in your user themes directory (`Elegir`,
+`Borrar` with a confirmation). Below them this deck's own proposals appear with
+**Guardar como mío**, which copies `decks/<slug>/themes/<name>.css` into the
+user themes directory so it stays available in every deck; promoting twice
+overwrites the user's copy. `Borrar` removes only your copy: a deck theme or a
+bundled theme with that name is never touched, and deleting the chosen style
+(`plan.theme`) stops the previews from resolving until you choose another one.
+Bundled themes are read-only and are not listed there.

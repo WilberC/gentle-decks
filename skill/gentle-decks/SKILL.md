@@ -69,8 +69,10 @@ Read its `FORMAT.md` before writing the first slide of a session.
    decks) and, when none fits, propose one or two more for this topic and audience: write each as `decks/<slug>/themes/<name>.css`
    following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
    until it prints `ok`. Keep the existing themes as options; the studio also
-   lists the user's own themes from the user themes directory. When the user
-   wants to reuse a proposed theme in other decks, copy it into the user themes
+   lists the user's own themes from the user themes directory, and its
+   **Mis estilos** view saves a proposed theme as the user's (**Guardar como mío**)
+   or deletes one of the user's own copies. When the user wants to reuse a
+   proposed theme in other decks outside the studio, copy it into the user themes
    directory (create it if needed) only after they confirm the destination.
 4. **Open the studio.** Start it in the background and watch its output:
    `node <decks-repo>/bin/decks.js studio decks/<slug>` prints
@@ -78,7 +80,7 @@ Read its `FORMAT.md` before writing the first slide of a session.
    line per user action. Use a monitor (for example the `monitor` tool on that
    command) so each line reaches you as it happens. Give the user the URL.
    The studio is one workspace: the outline stays on the left, the center
-   switches between Estilo, Slide and Grid, and comments are threads on the right.
+   switches between Estilo, Mis estilos, Slide and Grid, and comments are threads on the right.
    Before generation the user edits the outline (text, add, merge, move,
    delete, comment) and picks a theme; the studio writes `plan.json` directly.
    Without the studio (no browser), show the outline as a numbered list in chat

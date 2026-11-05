@@ -1340,3 +1340,94 @@ test("the studio lists user themes between deck and bundled themes and repaints 
   }
   assert.ok(text.includes("event: change"), "a user theme edit did not reach api/events");
 });
+
+test("promote copies a deck theme into the user themes dir, rejecting other sources (S3)", async (t) => {
+  const userDir = tmp();
+  fs.writeFileSync(path.join(userDir, "mine.css"), "/* user theme */\n");
+  const dir = makeDeck({ deck: ONE_SLIDE, themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir, { ...process.env, GENTLE_DECKS_THEMES: userDir });
+  t.after(() => stopStudio(studio));
+
+  // A bundled theme is not deck-local: nothing to copy.
+  const bundled = await send(studio, "POST", "api/themes/promote", { theme: "gentleman-cute" });
+  assert.equal(bundled.status, 404);
+  assert.deepEqual(bundled.body, { error: "not-found" });
+  // A theme that is already the user's own cannot be promoted either.
+  const alreadyMine = await send(studio, "POST", "api/themes/promote", { theme: "mine" });
+  assert.equal(alreadyMine.status, 404);
+  assert.equal(fs.readFileSync(path.join(userDir, "mine.css"), "utf8"), "/* user theme */\n");
+  // A name that is not a theme name is rejected before any filesystem work.
+  const invalid = await send(studio, "POST", "api/themes/promote", { theme: "../evil" });
+  assert.equal(invalid.status, 422);
+  assert.deepEqual(invalid.body, { error: "invalid", problems: ["$.theme: must match ^[a-z0-9][a-z0-9-]*$"] });
+  assert.equal(fs.existsSync(path.join(userDir, "..css")), false);
+
+  const target = path.join(userDir, "studio.css");
+  const promoted = await send(studio, "POST", "api/themes/promote", { theme: "studio" });
+  assert.equal(promoted.status, 200);
+  assert.deepEqual(promoted.body, { promoted: target });
+  assert.equal(fs.readFileSync(target, "utf8"), DECK_THEME);
+  // The deck keeps its own copy: promotion copies, never moves.
+  assert.equal(fs.readFileSync(path.join(dir, "themes", "studio.css"), "utf8"), DECK_THEME);
+
+  // Promoting twice is idempotent: same answer, same single file, and a new deck CSS is picked up.
+  fs.writeFileSync(path.join(dir, "themes", "studio.css"), `${DECK_THEME}.extra { --studio: 2; }\n`);
+  const again = await send(studio, "POST", "api/themes/promote", { theme: "studio" });
+  assert.equal(again.status, 200);
+  assert.deepEqual(again.body, { promoted: target });
+  assert.equal(fs.readFileSync(target, "utf8"), `${DECK_THEME}.extra { --studio: 2; }\n`);
+  assert.deepEqual(fs.readdirSync(userDir).sort(), ["mine.css", "studio.css"]);
+
+  // api/state lists the user's own themes by name, even when a deck theme shadows the same name.
+  const state = await call(studio, "api/state");
+  assert.deepEqual(state.body.mine, ["mine", "studio"]);
+});
+
+test("delete removes only user themes and never a deck or bundled theme (S3)", async (t) => {
+  const userDir = tmp();
+  fs.writeFileSync(path.join(userDir, "mine.css"), "/* mine */\n");
+  fs.writeFileSync(path.join(userDir, "other.css"), "/* another user theme */\n");
+  const dir = makeDeck({ deck: ONE_SLIDE, themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir, { ...process.env, GENTLE_DECKS_THEMES: userDir });
+  t.after(() => stopStudio(studio));
+  const deckTheme = path.join(dir, "themes", "studio.css");
+  const bundledTheme = path.resolve("themes", "gentleman-cute.css");
+
+  // DELETE goes through the same same-origin JSON guard as every other non-GET route.
+  const noType = await rawRequest(studio, { method: "DELETE", route: "api/themes/mine/mine", headers: { Origin: studio.origin } });
+  assert.equal(noType.status, 415);
+  const foreign = await rawRequest(studio, {
+    method: "DELETE",
+    route: "api/themes/mine/mine",
+    headers: { Origin: "http://evil.example", "Content-Type": "application/json" },
+  });
+  assert.equal(foreign.status, 403);
+  assert.equal(fs.existsSync(path.join(userDir, "mine.css")), true);
+
+  // Unknown name in the user dir.
+  const unknown = await send(studio, "DELETE", "api/themes/mine/nope");
+  assert.equal(unknown.status, 404);
+  assert.deepEqual(unknown.body, { error: "not-found" });
+  // A name that is not a theme name never reaches the filesystem.
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/Mine")).status, 404);
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/..%2f..%2fmine")).status, 404);
+  // A deck theme is not in the user dir: 404 and the deck copy survives.
+  const deck = await send(studio, "DELETE", "api/themes/mine/studio");
+  assert.equal(deck.status, 404);
+  assert.equal(fs.readFileSync(deckTheme, "utf8"), DECK_THEME);
+  // A bundled theme is never touched.
+  const bundledBefore = fs.readFileSync(bundledTheme, "utf8");
+  const bundled = await send(studio, "DELETE", "api/themes/mine/gentleman-cute");
+  assert.equal(bundled.status, 404);
+  assert.equal(fs.readFileSync(bundledTheme, "utf8"), bundledBefore);
+
+  const deleted = await send(studio, "DELETE", "api/themes/mine/mine");
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(deleted.body, { deleted: "mine" });
+  assert.equal(fs.existsSync(path.join(userDir, "mine.css")), false);
+  // Only the named file goes; the rest of the user dir is untouched.
+  assert.equal(fs.readFileSync(path.join(userDir, "other.css"), "utf8"), "/* another user theme */\n");
+  // A second delete of the same name is a 404, not an error.
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/mine")).status, 404);
+  assert.deepEqual((await call(studio, "api/state")).body.mine, ["other"]);
+});

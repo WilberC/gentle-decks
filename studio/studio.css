@@ -186,6 +186,15 @@ h1, h2, h3 { margin: 0; }
 .components span { color: var(--secondary); text-align: right; }
 .theme-detail .acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .theme-detail .note { margin: 0; font: 12px var(--mono); max-width: 70ch; }
+
+/* ---------- Mis estilos: the user's theme management view (S3) ---------- */
+.mine .themes { align-items: start; }
+.mine .theme { align-content: start; }
+.mine .mine-empty { grid-column: 1 / -1; margin: 0; font: 12.5px var(--mono); color: var(--secondary); }
+.mine .name .tag { font: 11px var(--mono); }
+.mine-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.mine-acts .btn { font: 12px var(--mono); padding: 4px 10px; }
+.mine-acts .btn.danger:hover:not(:disabled) { border-color: var(--red); color: var(--red); }
 .gen-row { display: flex; align-items: center; gap: 14px; }
 .gen { flex: 1; background: var(--primary-bg); color: var(--primary-fg); border: 0; border-radius: var(--r-m); padding: 13px 16px; font: 700 15px var(--sans); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .gen kbd { opacity: .75; }
