@@ -11,6 +11,7 @@ title: Deck title
 theme: gentleman-cute   # themes/<name>.css
 brand: gentle-decks     # bottom-left brand, optional
 brief: One-line purpose # canvas design.json brief, optional
+transition: fade        # fade (default) | slide | none
 lang: es
 ---
 
@@ -36,6 +37,7 @@ line. Unknown keys are ignored.
 | `kicker: TEXT` | Small uppercase label at the top of the slide. |
 | `class: cover` (space-separated list) | Extra classes on the `<section>`. `cover` also adds falling petals. |
 | `lead: TEXT` | Intro paragraph under the title (`.lead`). |
+| `animate: PROFILE` | Entrance animation for the slide: its direct children stagger in when the slide becomes active, and the entrance replays on every visit. Profiles: `fade-up`, `fade`, `rise`. `none` opts out; without the line the slide is static. An unknown profile fails the build with the slide number. |
 | `id: TEXT` | Stable slide id: lowercase letters, digits, hyphens, starting with a letter. Defaults to `slide-N`. Invalid or duplicate ids fail the build with the slide number. Keep it when moving slides: design artboards and comments follow the id. |
 | `layout: TEXT` | Planned component (from `plan.json`); a hint for the writer, not rendered. |
 
@@ -80,6 +82,31 @@ Nesting is supported (a container inside a container).
 | `stat` `big=4.2x` `small=más rápido` | Big number with a caption. |
 | `pills` | List items, one pill each. |
 | `figure` `src=images/x.png` `alt=TEXT` `caption=TEXT` | Embedded image with optional caption; quote values that contain spaces (`alt="Un punto"`). `src` is required: a local path relative to the deck file or an http(s) URL. Every build embeds readable images as data URIs, so exports and PDF prints never lose them. |
+
+Every container also accepts `animate=<profile>` next to its other `key=value`
+attributes, e.g. `::: card accent animate=rise`. That block animates on its own
+and is excluded from the slide stagger, so it never animates twice;
+`animate=none` opts a block out of the slide stagger. The profiles are the same
+as the slide directive, and an unknown one fails the build with the slide
+number.
+
+## Motion
+
+Motion is deck-wide and theme-agnostic: the CSS ships in the renderer, so every
+theme gets it, and the exported single HTML file carries it (no extra assets).
+
+- `animate: PROFILE` on a slide staggers its direct children in when the slide
+  becomes active; returning to the slide replays the entrance.
+- `animate=<profile>` on a container choreographs that block on its own.
+- `transition: fade|slide|none` in the front-matter sets the slide change
+  deck-wide: `fade` (default) is the crossfade, `slide` enters with vertical
+  movement, `none` switches instantly.
+- Animations only use `opacity` and `transform`: they never move layout or trap
+  keyboard focus.
+- `@media (prefers-reduced-motion: reduce)` disables entrance animations and
+  transitions, so the deck is instantly in its final state.
+- `@media print` shows the final state as well: the static PDF never hides
+  content that was waiting to enter.
 
 ## Example slide
 
