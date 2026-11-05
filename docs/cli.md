@@ -9,6 +9,7 @@ studio. From a checkout, run it as `node bin/decks.js`; from an npm install, as
 | Command | What it does |
 | --- | --- |
 | `decks <deck.md> -o <deck.html>` | Render the navigable presentation (one self-contained HTML file) |
+| `decks pdf <deck.md> [-o <deck.pdf>]` | Print the deck to a static PDF with headless Chrome: the same self-contained build (embedded images, `plan.json` order), no print dialog |
 | `decks <deck.md> --design <dir>` | Write one 1600×900 artboard per slide for the gentle-design canvas |
 | `decks <deck.md> (-o \| --design) --theme <name\|.css>` | Render with a theme override: a theme name (deck → user → bundled lookup) or a `.css` path loaded as-is, so draft themes can be iterated before passing `theme check` |
 | `decks plan check <plan.json>` | Validate an outline; prints `ok: N slides` |
@@ -23,6 +24,7 @@ studio. From a checkout, run it as `node bin/decks.js`; from an npm install, as
 
 ```bash
 node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html
+node bin/decks.js pdf decks/sample/gentle-decks.md -o decks/sample/gentle-decks.pdf
 node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks
 node bin/decks.js decks/sample/gentle-decks.md --design design/preview --theme decks/demo/themes/draft-warm.css
 node bin/decks.js plan check decks/demo/plan.json
@@ -37,6 +39,25 @@ node bin/decks.js theme check gentleman-cute
 - **`--design <dir>`** writes `slides/<id>.html` per slide plus `design.json`.
   Canvas comments follow the slide `id`, so they stay attached when slides
   move. Rebuilding removes stale slide files and keeps `comments.json`.
+- **`pdf <deck.md>`** writes `<deck>.pdf` next to the markdown, or at the `-o`
+  path. It prints the same self-contained deck the `-o` build produces, in
+  `plan.json` order, one 1600×900 slide per page, using the page size the theme
+  declares. The deliverable pair is the animated HTML plus this static PDF.
+
+### PDF export needs Chrome
+
+The `pdf` command prints through headless Chrome, so one of these must be
+available:
+
+1. `BROWSER`: a Chrome, Chromium or Edge binary.
+2. `CHROME_PATH`: the same, for environments that already set it.
+3. A well-known install: `/usr/bin/chromium-browser`, `/usr/bin/chromium`,
+   `/usr/bin/google-chrome`, `/usr/bin/microsoft-edge`, or the macOS app bundles.
+
+A `BROWSER` or `CHROME_PATH` that points nowhere fails the command instead of
+falling back to another browser, and the error lists every source it tried. PDF
+export also needs Node.js 22 or newer for the built-in WebSocket the DevTools
+protocol uses; the rest of the CLI still runs on Node.js 18.
 
 ## Determinism
 

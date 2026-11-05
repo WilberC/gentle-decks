@@ -218,6 +218,7 @@ test("missing output target prints usage and exits 2", () => {
   assert.equal(
     r.stderr,
     "usage: decks <deck.md> (-o <out.html> | --design <dir>) [--theme <name|.css>]\n" +
+      "       decks pdf <deck.md> [-o <out.pdf>]\n" +
       "       decks plan check <plan.json>\n" +
       "       decks plan scaffold <plan.json> -o <deck.md>\n" +
       "       decks theme check <name|path.css>\n" +
