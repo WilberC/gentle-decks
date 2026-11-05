@@ -157,6 +157,20 @@ kbd { font: 11px var(--mono); }
   .slide .card b { display: block; font: 700 13px ui-monospace, Menlo, monospace; color: #22c55e; margin-bottom: 2px; }
   .slide svg { width: 100%; }
   .slide .foot { position: absolute; left: 6%; right: 6%; bottom: 4%; display: flex; justify-content: space-between; font: 10px ui-monospace, Menlo, monospace; color: #5b5f7a; }
+  /* edit mode affordances: content is edited directly on the slide (canvas comments cg4aq9g8, dy278hem) */
+  .stage { position: relative; }
+  .edit-float { position: absolute; top: 12px; right: 20px; z-index: 2; display: flex; align-items: center; gap: 8px; font: 11.5px var(--mono); color: var(--text); background: var(--surface-2); border: 1px solid var(--accent); border-radius: 999px; padding: 4px 6px 4px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+  .edit-float b { color: var(--accent); font-weight: 600; }
+  .edit-float .hint { color: var(--secondary); }
+  .edit-float .x { border: 0; background: none; color: var(--secondary); font: 12px var(--mono); cursor: pointer; padding: 0 4px; }
+  .edit-float .x:hover { color: var(--text); }
+  .editable { border: 1px dashed #2f6bff66; border-radius: 4px; padding: 2px 6px; margin: 0 -6px; position: relative; cursor: text; }
+  .editable::after { content: "✎ doble clic"; position: absolute; right: -4px; top: -18px; font: 600 9.5px var(--mono); color: #fff; background: #2f6bff; padding: 1px 7px; border-radius: 999px; opacity: 0; }
+  .editable:hover { border-color: #2f6bff; background: #2f6bff0d; }
+  .editable:hover::after { opacity: 1; }
+  .editable.on::after { opacity: 1; }
+  .movable { border: 1px dashed #8b5cf666; border-radius: 12px; cursor: grab; position: relative; }
+  .movable::before { content: "⋮⋮ mover"; position: absolute; right: 8px; top: -10px; font: 600 9.5px var(--mono); color: #fff; background: #8b5cf6; padding: 1px 7px; border-radius: 999px; }
   /* edit + comment overlays (studio chrome, skin colors) */
   .editing { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; position: relative; }
   .editing::after { content: "editando · Enter guarda · Esc cancela"; position: absolute; left: 0; bottom: -24px; font: 600 10.5px var(--mono); color: var(--on-accent); background: var(--accent); padding: 2px 8px; border-radius: 4px; white-space: nowrap; letter-spacing: 0; }
@@ -191,7 +205,7 @@ kbd { font: 11px var(--mono); }
       <li class="row"><span class="n">01</span><div class="th fair"><i style="background:#2f6bff"></i><b>Por qué empezar con Python</b></div><div><h3>Por qué empezar con Python</h3><div class="sub"><span class="tag">cover</span><span class="st ok">lista</span></div></div></li>
       <li class="row"><span class="n">02</span><div class="th fair"><i style="background:#ffb020"></i><b>La primera victoria</b></div><div><h3>La primera victoria llega rápido</h3><div class="sub"><span class="tag">grid-2</span><span class="st ok">lista</span></div></div></li>
       <li class="row sel"><span class="n">03</span><div class="th fair"><i style="background:#2f6bff"></i><b>Hipótesis</b></div><div><h3>Leer el código se parece a leer una idea</h3><div class="sub"><span class="tag">term</span><span class="st over">no cabe</span><span class="cm">● 2</span></div></div>
-        <div class="acts"><span><kbd>e</kbd> editar</span><span><kbd>c</kbd> comentar</span><span><kbd>r</kbd> rehacer</span><span><kbd>l</kbd> layout</span></div></li>
+        <div class="acts"><span><kbd>c</kbd> comentar</span><span><kbd>r</kbd> rehacer</span><span><kbd>l</kbd> layout</span><span>el contenido se edita directo en la diapositiva →</span></div></li>
       <li class="row"><span class="n">04</span><div class="th fair"><i style="background:#22c55e"></i><b>Conceptos</b></div><div><h3>Aprendes conceptos que sirven en cualquier lenguaje</h3><div class="sub"><span class="tag">steps</span><span class="st ok">lista</span></div></div></li>
       <li class="row"><span class="n">05</span><div class="th writing fair"><i style="background:#8b5cf6"></i><b>Biblioteca…</b></div><div><h3>La biblioteca estándar amplía tus posibilidades</h3><div class="sub"><span class="tag">card</span><span class="st w">escribiendo…</span></div></div></li>
       <li class="row"><span class="n">06</span><div class="th pending"></div><div><h3>Puedes pasar de ejercicios a proyectos reales</h3><div class="sub"><span class="tag">grid-3</span><span class="st p">pendiente</span></div></div></li>
@@ -209,14 +223,15 @@ kbd { font: 11px var(--mono); }
       <span style="font:12px var(--mono);color:var(--secondary);white-space:nowrap">← →</span>
     </div>
     <div class="stage">
+      <div class="edit-float" role="status"><b>✎ edición</b><span class="hint">doble clic edita · ⋮⋮ mueve · Esc sale</span><button class="x" aria-label="Descartar aviso">×</button></div>
       <div class="slide">
         <div>
           <span class="pill">03 · Hipótesis</span>
           <h2 class="editing">Leer código es como <em>leer una idea</em></h2>
-          <p>Python usa palabras y estructuras sencillas: menos símbolos, más intención.</p>
+          <p class="editable on">Python usa palabras y estructuras sencillas: menos símbolos, más intención.</p>
           <div class="cards">
-            <div class="card"><b>if edad &gt;= 18:</b>se lee casi en voz alta</div>
-            <div class="card"><b>for nombre in lista:</b>recorre sin índices</div>
+            <div class="card movable"><b>if edad &gt;= 18:</b>se lee casi en voz alta</div>
+            <div class="card editable"><b>for nombre in lista:</b>recorre sin índices</div>
           </div>
         </div>
         <svg viewBox="0 0 300 260" role="img" aria-label="Diorama isométrico">
@@ -238,7 +253,7 @@ kbd { font: 11px var(--mono); }
         <div class="foot"><span>Por qué empezar con Python</span><span>03 / 08</span></div>
       </div>
     </div>
-    <div class="caption"><span><b>Editar</b>: clic en un texto y escribe · se guarda en el markdown</span><span class="st over" style="font:12px var(--mono);white-space:nowrap">1020 / 900 px</span></div>
+    <div class="caption"><span><b>Editar</b>: doble clic en un texto para editarlo · arrastra ⋮⋮ para mover un elemento · se guarda en el markdown</span><span class="st over" style="font:12px var(--mono);white-space:nowrap">1020 / 900 px</span></div>
   </main>
 
   <aside class="side" aria-label="Comentarios">

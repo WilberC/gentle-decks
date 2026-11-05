@@ -179,12 +179,151 @@ test("studio prints exactly one tokenized URL and 404s outside it (S5)", async (
   assert.equal((await call(studio, "api/state")).status, 200);
 });
 
+test("studio keeps the same URL across restarts for the same deck (S2)", async (t) => {
+  const dir = makeDeck();
+  const first = await startStudio(dir);
+  t.after(() => stopStudio(first));
+  assert.equal(first.token.length, 32);
+  assert.equal(fs.readFileSync(path.join(dir, ".studio-token"), "utf8").trim(), first.token);
+
+  await stopStudio(first);
+  const second = await startStudio(dir);
+  t.after(() => stopStudio(second));
+  assert.equal(second.token, first.token, "the persisted token must survive a restart");
+
+  // A corrupt token file is replaced, not trusted.
+  fs.writeFileSync(path.join(dir, ".studio-token"), "bad token with spaces/!");
+  await stopStudio(second);
+  const third = await startStudio(dir);
+  t.after(() => stopStudio(third));
+  assert.match(third.token, /^[A-Za-z0-9_-]{32}$/);
+});
+
+const PNG_1PX = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+test("-o embeds local images so the exported file is self-contained (S9)", () => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.writeFileSync(path.join(dir, "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n![dot](dot.png)"));
+  const out = path.join(dir, "out.html");
+  const build = spawnSync(process.execPath, [CLI, deckFile, "-o", out], { encoding: "utf8", env: ENV });
+  assert.equal(build.status, 0, build.stderr);
+  const html = fs.readFileSync(out, "utf8");
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`));
+  assert.ok(!html.includes('src="dot.png"'));
+});
+
+test("export serves a self-contained download with embedded images (S3, S9)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.mkdirSync(path.join(dir, "images"));
+  fs.writeFileSync(path.join(dir, "images", "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n![dot](images/dot.png)"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const slug = path.basename(dir);
+  const res = await fetch(`${studio.base}export`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-disposition"), new RegExp(`attachment; filename="${slug}\\.html"`));
+  const html = await res.text();
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`), "local image must be embedded");
+  assert.ok(!html.includes('src="images/dot.png"'), "no external references may remain");
+});
+
+test("export follows the established plan order even when the markdown was written out of order (S18)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  // The agent wrote the markdown with the slides in a different order than plan.json.
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  const chunks = scaffoldDeck(PLAN).split("\n---\n").filter((chunk) => chunk.trim() !== "");
+  const [head, ...slides] = chunks;
+  fs.writeFileSync(deckFile, [head, ...slides.slice().reverse()].join("\n---\n\n"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const html = await (await fetch(`${studio.base}export`)).text();
+  const at = (marker) => html.indexOf(marker);
+  assert.ok(at("One deck") < at("Second slide"), `plan order required: ${at("One deck")} < ${at("Second slide")}`);
+  assert.ok(at("Second slide") < at("Third slide"), `plan order required: ${at("Second slide")} < ${at("Third slide")}`);
+});
+
+test("export refuses when the deck is not written yet (S3)", async (t) => {
+  const studio = await startStudio(makeDeck());
+  t.after(() => stopStudio(studio));
+  const res = await fetch(`${studio.base}export`);
+  assert.equal(res.status, 404);
+});
+
 test("studio refuses a deck dir without plan.json (S5)", () => {
   const dir = tmp();
   const r = run("studio", dir, "--port", "0");
   assert.equal(r.code, 1);
   assert.equal(r.stdout, "");
   assert.equal(r.stderr, `studio: ${path.join(dir, "plan.json")} not found\n`);
+});
+
+test("artboards serve deck images embedded so the sandbox CSP renders them (S8, S9)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  fs.mkdirSync(path.join(dir, "images"));
+  fs.writeFileSync(path.join(dir, "images", "dot.png"), Buffer.from(PNG_1PX, "base64"));
+  const deckFile = path.join(dir, `${path.basename(dir)}.md`);
+  fs.writeFileSync(deckFile, scaffoldDeck(PLAN).replace("## Second slide", "## Second slide\n\n::: figure src=images/dot.png alt=dot\n:::"));
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+
+  const res = await fetch(`${studio.base}slides/second.html`);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.ok(html.includes(`data:image/png;base64,${PNG_1PX}`), "artboard image must be a data URI");
+});
+
+test("studio stop terminates the server and clears the pid file (S15)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  assert.equal(fs.readFileSync(path.join(dir, ".studio-pid"), "utf8").trim(), String(studio.child.pid));
+
+  const r = run("studio", "stop", dir);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /stopped/);
+  assert.ok(!fs.existsSync(path.join(dir, ".studio-pid")), "pid file must be removed");
+  const exit = await Promise.race([studio.exited, new Promise((resolve) => setTimeout(() => resolve("timeout"), 5000))]);
+  assert.notEqual(exit, "timeout", "the studio process must exit after stop");
+});
+
+test("studio stop fails cleanly when no studio is running (S15)", () => {
+  const r = run("studio", "stop", makeDeck());
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /not running/);
+  assert.equal(r.stdout, "");
+});
+
+test("POST api/requests accepts an approve request without slide scope (S15)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await send(studio, "POST", "api/requests", { kind: "approve" });
+  assert.equal(res.status, 200);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0].kind, "approve");
+});
+
+test("POST api/requests accepts a move request with selector and excerpt (S8a)", async (t) => {
+  const dir = makeDeck();
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const res = await send(studio, "POST", "api/requests", {
+    kind: "move",
+    slideId: "second",
+    selector: ".slide > div.grid-2 > p:nth-of-type(1)",
+    excerpt: "Un punto",
+  });
+  assert.equal(res.status, 200);
+  const req = JSON.parse(fs.readFileSync(path.join(dir, "requests.json"), "utf8")).requests[0];
+  assert.equal(req.kind, "move");
+  assert.equal(req.selector, ".slide > div.grid-2 > p:nth-of-type(1)");
+  const bad = await send(studio, "POST", "api/requests", { kind: "move", excerpt: "sin slide" });
+  assert.equal(bad.status, 422);
 });
 
 test("non-GET and Host guards reject cross-origin, wrong type, and big bodies (S5)", async (t) => {
@@ -466,6 +605,210 @@ test("POST api/requests validates, appends, prints a line, and dedupes overflow 
   assert.equal(run("studio", "resolve", dir, overflow.body.request.id).code, 0);
   const reopened = await send(studio, "POST", "api/requests", { kind: "overflow", slideId: "second" });
   assert.equal(reopened.body.ignored, undefined);
+});
+
+test("POST api/requests accepts propose-style and validates its mode and theme (S10, S11)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+
+  // S10: a brand-new theme for this deck, with optional instructions from the user.
+  const fresh = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new", text: "Cold lab colors" });
+  assert.equal(fresh.status, 200);
+  assert.deepEqual(
+    {
+      kind: fresh.body.request.kind,
+      mode: fresh.body.request.mode,
+      theme: fresh.body.request.theme,
+      text: fresh.body.request.text,
+      status: fresh.body.request.status,
+    },
+    { kind: "propose-style", mode: "new", theme: undefined, text: "Cold lab colors", status: "open" },
+  );
+  await waitFor(
+    () => studio.stdout().includes(`request ${fresh.body.request.id} propose-style -\n`),
+    4000,
+    "propose-style stdout line",
+  );
+
+  // `mode` defaults to "new", so the button works without sending it.
+  const implicit = await send(studio, "POST", "api/requests", { kind: "propose-style" });
+  assert.equal(implicit.status, 200);
+  assert.equal(implicit.body.request.mode, "new");
+
+  // S11: theme-level requests name the theme they target.
+  const improve = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "improve", theme: "studio" });
+  assert.equal(improve.status, 200);
+  assert.equal(improve.body.request.theme, "studio");
+  assert.equal(improve.body.request.mode, "improve");
+  const comment = await send(studio, "POST", "api/requests", {
+    kind: "propose-style",
+    mode: "comment",
+    theme: "studio",
+    text: "More contrast on the title",
+  });
+  assert.equal(comment.status, 200);
+  assert.equal(comment.body.request.text, "More contrast on the title");
+
+  const before = fs.readFileSync(file);
+  const invalid = [
+    [{ kind: "propose-style", mode: "nope" }, /^\$\.mode: /],
+    [{ kind: "propose-style", mode: "improve" }, /^\$\.theme: /],
+    [{ kind: "propose-style", mode: "comment", theme: "studio" }, /^\$\.text: /],
+    [{ kind: "propose-style", mode: "improve", theme: "two words" }, /^\$\.theme: /],
+    [{ kind: "propose-style", mode: "improve", theme: "../etc/passwd" }, /^\$\.theme: /],
+    [{ kind: "propose-style", text: "" }, /^\$\.text: /],
+  ];
+  for (const [payload, problem] of invalid) {
+    const res = await send(studio, "POST", "api/requests", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.equal(res.body.error, "invalid");
+    assert.ok(
+      res.body.problems.some((p) => problem.test(p)),
+      `${JSON.stringify(payload)} -> ${JSON.stringify(res.body.problems)}`,
+    );
+  }
+  // The invalid payloads wrote nothing; the valid ones were appended in order.
+  const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.deepEqual(doc.requests.map((r) => r.mode), ["new", "new", "improve", "comment"]);
+  assert.ok(before.length > 0);
+});
+
+const REFERENCE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".svg", ".pdf"];
+const REFERENCE_EXT_PROBLEM = `$.name: extension must be one of ${REFERENCE_EXTENSIONS.join(", ")}`;
+const REFERENCE_PATTERN_PROBLEM = /^\$\.reference: must match /;
+
+test("POST api/references stores a whitelisted reference under the deck (S1)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const refs = path.join(dir, "references");
+
+  const png = await send(studio, "POST", "api/references", { name: "marca.png", data: PNG_1PX });
+  assert.equal(png.status, 200);
+  assert.deepEqual(png.body, { reference: "references/marca.png" });
+  assert.deepEqual(fs.readFileSync(path.join(refs, "marca.png")), Buffer.from(PNG_1PX, "base64"));
+
+  // Every whitelisted extension is accepted, and the stored extension is lower-cased.
+  for (const [name, stored] of [
+    ["brief.pdf", "brief.pdf"],
+    ["foto.JPG", "foto.jpg"],
+    ["logo.svg", "logo.svg"],
+    ["clip.avif", "clip.avif"],
+  ]) {
+    const res = await send(studio, "POST", "api/references", { name, data: PNG_1PX });
+    assert.equal(res.status, 200, name);
+    assert.deepEqual(res.body, { reference: `references/${stored}` }, name);
+  }
+
+  // Only the basename survives: no traversal, no extra directories, and the same name overwrites.
+  for (const name of ["../../etc/marca.png", "..\\..\\marca.png"]) {
+    const res = await send(studio, "POST", "api/references", { name, data: PNG_1PX });
+    assert.equal(res.status, 200, name);
+    assert.deepEqual(res.body, { reference: "references/marca.png" }, name);
+  }
+  const longName = await send(studio, "POST", "api/references", { name: `${"a".repeat(200)}.png`, data: PNG_1PX });
+  assert.equal(longName.status, 200);
+  assert.deepEqual(longName.body, { reference: `references/${"a".repeat(64)}.png` });
+  assert.deepEqual(fs.readdirSync(refs).sort(), [
+    "a".repeat(64) + ".png",
+    "brief.pdf",
+    "clip.avif",
+    "foto.jpg",
+    "logo.svg",
+    "marca.png",
+  ]);
+  assert.ok(!fs.existsSync(path.join(dir, "etc")), "no directory may be created outside references/");
+
+  // This route carries a bigger cap than the 1 MB every other route keeps (the S5 test pins that one).
+  const medium = await send(studio, "POST", "api/references", { name: "big.png", data: "A".repeat(2 * 1024 * 1024) });
+  assert.equal(medium.status, 200);
+  assert.equal(fs.statSync(path.join(refs, "big.png")).size, (2 * 1024 * 1024 * 3) / 4);
+
+  const before = fs.readdirSync(refs).sort();
+  const rejections = [
+    [{ name: "brief.txt", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: "marca.png.exe", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: ".png", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: "marca con espacios.png", data: PNG_1PX }, ["$.name: must match ^[A-Za-z0-9][A-Za-z0-9._-]*$"]],
+    [{ name: "", data: PNG_1PX }, ["$.name: must be a non-empty filename"]],
+    [{ name: 42, data: PNG_1PX }, ["$.name: must be a non-empty filename"]],
+    [{ name: "marca.png" }, ["$.data: must be a non-empty base64 string"]],
+    [{ name: "marca.png", data: "no!!base64" }, ["$.data: must be a non-empty base64 string"]],
+  ];
+  for (const [payload, problems] of rejections) {
+    const res = await send(studio, "POST", "api/references", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.deepEqual(res.body, { error: "invalid", problems }, JSON.stringify(payload));
+    assert.deepEqual(fs.readdirSync(refs).sort(), before, "a rejection must write nothing");
+  }
+
+  const oversized = await send(studio, "POST", "api/references", {
+    name: "huge.png",
+    data: "A".repeat(13 * 1024 * 1024),
+  });
+  assert.equal(oversized.status, 413);
+  assert.deepEqual(oversized.body, { error: "too-large" });
+  assert.deepEqual(fs.readdirSync(refs).sort(), before, "an oversized upload must write nothing");
+});
+
+test("POST api/requests carries a propose-style reference that exists on disk (S1)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN), themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+
+  const uploaded = await send(studio, "POST", "api/references", { name: "marca.png", data: PNG_1PX });
+  const reference = uploaded.body.reference;
+
+  const fresh = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new", reference, text: "Imitá esta marca" });
+  assert.equal(fresh.status, 200);
+  assert.deepEqual(
+    {
+      kind: fresh.body.request.kind,
+      mode: fresh.body.request.mode,
+      reference: fresh.body.request.reference,
+      text: fresh.body.request.text,
+      status: fresh.body.request.status,
+    },
+    { kind: "propose-style", mode: "new", reference: "references/marca.png", text: "Imitá esta marca", status: "open" },
+  );
+  await waitFor(
+    () => studio.stdout().includes(`request ${fresh.body.request.id} propose-style -\n`),
+    4000,
+    "propose-style reference stdout line",
+  );
+
+  const improve = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "improve", theme: "studio", reference });
+  assert.equal(improve.status, 200);
+  assert.equal(improve.body.request.theme, "studio");
+  assert.equal(improve.body.request.reference, "references/marca.png");
+
+  // A reference is optional: requests without one keep working and never gain the field.
+  const plain = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new" });
+  assert.equal(plain.status, 200);
+  assert.equal("reference" in plain.body.request, false);
+
+  const before = fs.readFileSync(file);
+  const invalid = [
+    [{ kind: "propose-style", mode: "new", reference: "references/ghost.png" }, ["$.reference: file not found"]],
+    [{ kind: "propose-style", mode: "new", reference: "marca.png" }, REFERENCE_PATTERN_PROBLEM],
+    [{ kind: "propose-style", mode: "new", reference: "references/../plan.json" }, REFERENCE_PATTERN_PROBLEM],
+    [{ kind: "propose-style", mode: "new", reference: 5 }, REFERENCE_PATTERN_PROBLEM],
+  ];
+  for (const [payload, problems] of invalid) {
+    const res = await send(studio, "POST", "api/requests", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.equal(res.body.error, "invalid");
+    if (Array.isArray(problems)) {
+      assert.deepEqual(res.body.problems, problems, JSON.stringify(payload));
+    } else {
+      assert.equal(res.body.problems.length, 1, JSON.stringify(payload));
+      assert.match(res.body.problems[0], problems, JSON.stringify(payload));
+    }
+    assert.deepEqual(fs.readFileSync(file), before, "a rejection must write nothing");
+  }
 });
 
 test("studio requests and resolve CLI read and update requests.json (S9)", async (t) => {
@@ -883,7 +1226,7 @@ test("present is sandboxed like the artboards and keeps the -o bytes (F1)", asyn
   assert.equal(r.status, 200);
   assert.equal(
     r.headers.get("content-security-policy"),
-    "sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
+    "sandbox allow-scripts allow-popups; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:",
   );
   const out = path.join(dir, "out.html");
   const built = spawnSync(process.execPath, [CLI, deckFile(dir), "-o", out], { encoding: "utf8" });
@@ -996,4 +1339,95 @@ test("the studio lists user themes between deck and bundled themes and repaints 
     text += new TextDecoder().decode(value);
   }
   assert.ok(text.includes("event: change"), "a user theme edit did not reach api/events");
+});
+
+test("promote copies a deck theme into the user themes dir, rejecting other sources (S3)", async (t) => {
+  const userDir = tmp();
+  fs.writeFileSync(path.join(userDir, "mine.css"), "/* user theme */\n");
+  const dir = makeDeck({ deck: ONE_SLIDE, themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir, { ...process.env, GENTLE_DECKS_THEMES: userDir });
+  t.after(() => stopStudio(studio));
+
+  // A bundled theme is not deck-local: nothing to copy.
+  const bundled = await send(studio, "POST", "api/themes/promote", { theme: "gentleman-cute" });
+  assert.equal(bundled.status, 404);
+  assert.deepEqual(bundled.body, { error: "not-found" });
+  // A theme that is already the user's own cannot be promoted either.
+  const alreadyMine = await send(studio, "POST", "api/themes/promote", { theme: "mine" });
+  assert.equal(alreadyMine.status, 404);
+  assert.equal(fs.readFileSync(path.join(userDir, "mine.css"), "utf8"), "/* user theme */\n");
+  // A name that is not a theme name is rejected before any filesystem work.
+  const invalid = await send(studio, "POST", "api/themes/promote", { theme: "../evil" });
+  assert.equal(invalid.status, 422);
+  assert.deepEqual(invalid.body, { error: "invalid", problems: ["$.theme: must match ^[a-z0-9][a-z0-9-]*$"] });
+  assert.equal(fs.existsSync(path.join(userDir, "..css")), false);
+
+  const target = path.join(userDir, "studio.css");
+  const promoted = await send(studio, "POST", "api/themes/promote", { theme: "studio" });
+  assert.equal(promoted.status, 200);
+  assert.deepEqual(promoted.body, { promoted: target });
+  assert.equal(fs.readFileSync(target, "utf8"), DECK_THEME);
+  // The deck keeps its own copy: promotion copies, never moves.
+  assert.equal(fs.readFileSync(path.join(dir, "themes", "studio.css"), "utf8"), DECK_THEME);
+
+  // Promoting twice is idempotent: same answer, same single file, and a new deck CSS is picked up.
+  fs.writeFileSync(path.join(dir, "themes", "studio.css"), `${DECK_THEME}.extra { --studio: 2; }\n`);
+  const again = await send(studio, "POST", "api/themes/promote", { theme: "studio" });
+  assert.equal(again.status, 200);
+  assert.deepEqual(again.body, { promoted: target });
+  assert.equal(fs.readFileSync(target, "utf8"), `${DECK_THEME}.extra { --studio: 2; }\n`);
+  assert.deepEqual(fs.readdirSync(userDir).sort(), ["mine.css", "studio.css"]);
+
+  // api/state lists the user's own themes by name, even when a deck theme shadows the same name.
+  const state = await call(studio, "api/state");
+  assert.deepEqual(state.body.mine, ["mine", "studio"]);
+});
+
+test("delete removes only user themes and never a deck or bundled theme (S3)", async (t) => {
+  const userDir = tmp();
+  fs.writeFileSync(path.join(userDir, "mine.css"), "/* mine */\n");
+  fs.writeFileSync(path.join(userDir, "other.css"), "/* another user theme */\n");
+  const dir = makeDeck({ deck: ONE_SLIDE, themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir, { ...process.env, GENTLE_DECKS_THEMES: userDir });
+  t.after(() => stopStudio(studio));
+  const deckTheme = path.join(dir, "themes", "studio.css");
+  const bundledTheme = path.resolve("themes", "gentleman-cute.css");
+
+  // DELETE goes through the same same-origin JSON guard as every other non-GET route.
+  const noType = await rawRequest(studio, { method: "DELETE", route: "api/themes/mine/mine", headers: { Origin: studio.origin } });
+  assert.equal(noType.status, 415);
+  const foreign = await rawRequest(studio, {
+    method: "DELETE",
+    route: "api/themes/mine/mine",
+    headers: { Origin: "http://evil.example", "Content-Type": "application/json" },
+  });
+  assert.equal(foreign.status, 403);
+  assert.equal(fs.existsSync(path.join(userDir, "mine.css")), true);
+
+  // Unknown name in the user dir.
+  const unknown = await send(studio, "DELETE", "api/themes/mine/nope");
+  assert.equal(unknown.status, 404);
+  assert.deepEqual(unknown.body, { error: "not-found" });
+  // A name that is not a theme name never reaches the filesystem.
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/Mine")).status, 404);
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/..%2f..%2fmine")).status, 404);
+  // A deck theme is not in the user dir: 404 and the deck copy survives.
+  const deck = await send(studio, "DELETE", "api/themes/mine/studio");
+  assert.equal(deck.status, 404);
+  assert.equal(fs.readFileSync(deckTheme, "utf8"), DECK_THEME);
+  // A bundled theme is never touched.
+  const bundledBefore = fs.readFileSync(bundledTheme, "utf8");
+  const bundled = await send(studio, "DELETE", "api/themes/mine/gentleman-cute");
+  assert.equal(bundled.status, 404);
+  assert.equal(fs.readFileSync(bundledTheme, "utf8"), bundledBefore);
+
+  const deleted = await send(studio, "DELETE", "api/themes/mine/mine");
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(deleted.body, { deleted: "mine" });
+  assert.equal(fs.existsSync(path.join(userDir, "mine.css")), false);
+  // Only the named file goes; the rest of the user dir is untouched.
+  assert.equal(fs.readFileSync(path.join(userDir, "other.css"), "utf8"), "/* another user theme */\n");
+  // A second delete of the same name is a 404, not an error.
+  assert.equal((await send(studio, "DELETE", "api/themes/mine/mine")).status, 404);
+  assert.deepEqual((await call(studio, "api/state")).body.mine, ["other"]);
 });

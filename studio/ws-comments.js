@@ -36,6 +36,7 @@ function ago(iso) {
 
 // `h2 · "excerpt"` when the request names an element, else the kind (S7).
 function target(r) {
+  if (r.kind === "propose-style") return `estilo · ${r.theme ?? "nuevo"}${r.mode === "comment" ? " · comentario" : r.mode === "improve" ? " · mejora" : ""}`;
   if (r.excerpt) {
     const last = String(r.selector ?? "").split(" > ").pop() ?? "";
     const tag = last.replace(/:nth-of-type\(\d+\)/, "").replace(/^#/, "") || "elemento";
@@ -120,35 +121,92 @@ function thread(entries) {
   return ul;
 }
 
+// S14: queued comments per slide, module-scope so re-renders never lose them; the user chooses
+// when the whole batch goes to the agent.
+const batch = new Map(); // slide id -> [texts]
+
 function composer() {
   const list = slidesInOrder();
   const index = list.findIndex((s) => s.id === app.current);
   const slide = list[index] ?? null;
   const box = el("div", { className: "compose" });
+  // The draft lives in `app`, keyed by slide: a re-render replaces this node, never the text (S1).
   const area = el("textarea", {
     id: "compose",
     rows: 2,
+    value: (slide && app.drafts.get(slide.id)) ?? "",
     ariaLabel: slide ? `Comentar en la diapositiva ${index + 1}` : "Comentar",
     placeholder: slide ? `Comentar en la diapositiva ${String(index + 1).padStart(2, "0")}…` : "Elige una diapositiva para comentar",
   });
   area.disabled = !slide;
   const send = el("button", { type: "button", className: "go", id: "send", textContent: "enviar" });
   send.disabled = !slide;
+  const queueBtn = el("button", { type: "button", className: "go ghost", id: "compose-queue", textContent: "a la cola" });
+  queueBtn.disabled = !slide;
+  queueBtn.title = "Guarda el comentario en una cola local para enviar varios juntos";
   const submit = async () => {
     const text = area.value.trim();
     if (!text || !slide) return;
     area.value = "";
+    app.drafts.delete(slide.id);
     await postRequest({ kind: "comment", slideId: slide.id, text }, "Comentario enviado al agente.");
     document.getElementById("compose")?.focus();
   };
   send.addEventListener("click", submit);
+  queueBtn.addEventListener("click", () => {
+    const text = area.value.trim();
+    if (!text || !slide) return;
+    const queued = batch.get(slide.id) ?? [];
+    queued.push(text);
+    batch.set(slide.id, queued);
+    area.value = "";
+    app.drafts.delete(slide.id);
+    renderComments(document.getElementById("comments"));
+    document.getElementById("compose")?.focus();
+  });
+  area.addEventListener("input", () => {
+    if (slide) app.drafts.set(slide.id, area.value);
+  });
   area.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
       event.preventDefault();
       submit();
     }
   });
-  box.append(area, el("div", { className: "row2" }, el("span", { textContent: "⌘↵ enviar al agente" }), send));
+  box.append(area);
+  // The queued drafts, removable one by one, with a send-all action (S14).
+  const queued = (slide && batch.get(slide.id)) ?? [];
+  if (queued.length) {
+    const queuedBox = el("ul", { className: "queue-list", ariaLabel: "Comentarios en cola" });
+    queued.forEach((text, at) => {
+      const drop = el("button", { type: "button", textContent: "×", ariaLabel: `Quitar de la cola: ${text}` });
+      drop.addEventListener("click", () => {
+        queued.splice(at, 1);
+        if (!queued.length) batch.delete(slide.id);
+        renderComments(document.getElementById("comments"));
+      });
+      queuedBox.append(el("li", {}, el("span", { textContent: text }), drop));
+    });
+    box.append(queuedBox);
+  }
+  const row = el("div", { className: "row2" });
+  if (queued.length) {
+    const sendAll = el("button", { type: "button", className: "go", id: "send-all", textContent: `enviar ${queued.length} al agente` });
+    sendAll.addEventListener("click", async () => {
+      const texts = batch.get(slide.id) ?? [];
+      batch.delete(slide.id);
+      for (const text of texts) {
+        // One request per comment: the agent answers each in its own thread (S7).
+        await postRequest({ kind: "comment", slideId: slide.id, text }, text === texts.at(-1) ? `${texts.length} comentarios enviados al agente.` : null);
+      }
+      renderComments(document.getElementById("comments"));
+    });
+    row.append(sendAll);
+  } else {
+    row.append(el("span", { textContent: "⌘↵ enviar al agente" }));
+  }
+  row.append(queueBtn, send);
+  box.append(row);
   return box;
 }
 

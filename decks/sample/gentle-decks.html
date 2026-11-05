@@ -36,6 +36,7 @@
   .slide {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; justify-content: flex-start;
+    gap: 2.2vh;
     overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
     scrollbar-width: thin; scrollbar-color: var(--border) transparent;
     padding: 6vh 7vw 8vh;
@@ -111,6 +112,11 @@
   .term .bar i:nth-child(1) { background: var(--error); } .term .bar i:nth-child(2) { background: var(--peach); } .term .bar i:nth-child(3) { background: var(--mint); }
   .term pre { padding: 2.2vh 1.6vw; font-size: clamp(.9rem, 1.2vw, 1.15rem); line-height: 1.7; color: var(--text); white-space: pre-wrap; }
   .term .c { color: var(--dim); } .term .p { color: var(--accent); } .term .k { color: var(--champagne); } .term .s { color: var(--mint); } .term .e { color: var(--error); }
+
+  /* figure: an embedded image with its caption */
+  .figure { margin: 0; display: grid; gap: .8vh; }
+  .figure img { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--border-subtle); }
+  .figure figcaption { font-family: var(--mono); font-size: .85rem; color: var(--dim); }
 
   /* steps */
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2vw; margin-top: 2vh; }
@@ -219,6 +225,8 @@
   /* print / PDF: one slide per page */
   @media print {
     @page { size: 1600px 900px; margin: 0; }
+    /* shadows rasterize at low print DPI and read as blur on paper: drop them for export */
+    .slide * { box-shadow: none; }
     html, body { overflow: visible; height: auto; }
     .deck { height: auto; }
     .slide { position: relative; width: 1600px; height: 900px; opacity: 1; transform: none; overflow: visible; page-break-after: always; break-after: page; }

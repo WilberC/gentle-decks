@@ -8,6 +8,12 @@ import { readPlan, scaffoldDeck } from "../plan.js";
 import { slideTitle } from "../design.js";
 
 export const REQUESTS_FILE = "requests.json";
+// S2: the studio URL must be stable across restarts for the same deck, so the access token is
+// persisted next to the plan instead of being generated per server start.
+export const TOKEN_FILE = ".studio-token";
+// S15: the server records its pid so `decks studio stop` can shut it down after approval.
+export const PID_FILE = ".studio-pid";
+const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
 // S8: a request may carry a reply (string, at most 2000 characters) and when it was written.
 export const MAX_REPLY = 2000;
 // S8: api/state keeps only the most recent resolved requests browsable.
@@ -23,11 +29,37 @@ export function studioPaths(dir) {
     plan: path.join(root, "plan.json"),
     deck: path.join(root, `${slug}.md`),
     requests: path.join(root, REQUESTS_FILE),
+    token: path.join(root, TOKEN_FILE),
+    pid: path.join(root, PID_FILE),
     themes: path.join(root, "themes"),
   };
 }
 
 export const sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
+
+// S15: the running studio's pid, or null when no studio is recorded for this deck.
+export function readStudioPid(paths) {
+  try {
+    const pid = Number(fs.readFileSync(paths.pid, "utf8").trim());
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
+// S2: returns the deck's persisted studio token, creating a fresh one only when the file is
+// missing or corrupt. A corrupt file is replaced, never trusted.
+export function readOrCreateStudioToken(paths) {
+  try {
+    const stored = fs.readFileSync(paths.token, "utf8").trim();
+    if (TOKEN_RE.test(stored)) return stored;
+  } catch {
+    // first run for this deck
+  }
+  const token = crypto.randomBytes(24).toString("base64url");
+  writeAtomic(paths.token, `${token}\n`);
+  return token;
+}
 
 function readBytes(file) {
   try {
@@ -151,9 +183,18 @@ export const replyProblem = (text) =>
   typeof text !== "string" || text.trim() === "" || text.length > MAX_REPLY ? "invalid reply" : null;
 
 // The agent bridge (S9): requests describe work an agent should do, and stay open until resolved.
-export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow"];
-const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow"]);
+// S10/S11: `propose-style` carries theme work, so theme actions are not disguised as slide comments.
+export const REQUEST_KINDS = ["generate", "comment", "redo", "layout", "add-slide", "overflow", "propose-style", "approve", "move"];
+const SLIDE_KINDS = new Set(["comment", "redo", "layout", "add-slide", "overflow", "move"]);
 const TEXT_KINDS = new Set(["comment", "redo", "add-slide"]);
+// S10/S11: what a `propose-style` request asks for: a new theme, an improvement, or an answer.
+const THEME_MODES = ["new", "improve", "comment"];
+const THEME_KINDS = new Set(["propose-style"]);
+// A theme name is a CSS file stem in the deck's themes dir, never a path (S11).
+const THEME_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+// S1: a reference file the studio uploaded under the deck, relative to the deck dir, never a path
+// out of it. The server also reuses this pattern before it touches the filesystem.
+export const REFERENCE = /^references\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const isText = (value) => typeof value === "string";
 
 // Validates a POST api/requests body; returns `{ problems, fields }` with only known keys in `fields`.
@@ -174,6 +215,24 @@ export function validateRequest(input, layouts) {
   } else if (!isText(input.text) || input.text.trim() === "") {
     problems.push("$.text: must be a non-empty string");
   }
+  // S10/S11: a theme request says what to do (`mode`, default `new`) and, except for a brand-new
+  // theme, which theme it targets. Commenting on a theme is a request with text, like a comment.
+  const mode = input.mode ?? "new";
+  if (THEME_KINDS.has(kind)) {
+    if (!THEME_MODES.includes(mode)) problems.push(`$.mode: must be one of ${THEME_MODES.join(", ")}`);
+    if (mode !== "new" && input.theme === undefined) problems.push("$.theme: required");
+    if (mode === "comment" && input.text === undefined) problems.push("$.text: required");
+  } else if (input.mode !== undefined) {
+    problems.push(`$.mode: must be one of ${THEME_MODES.join(", ")}`);
+  }
+  if (input.theme !== undefined && (!isText(input.theme) || !THEME_NAME.test(input.theme))) {
+    problems.push(`$.theme: must match ${THEME_NAME.source}, got ${JSON.stringify(input.theme)}`);
+  }
+  // S1: an optional reference the agent must read before writing the CSS. State stays pure here; the
+  // server checks that the file actually exists, where the deck paths are known.
+  if (input.reference !== undefined && (!isText(input.reference) || !REFERENCE.test(input.reference))) {
+    problems.push(`$.reference: must match ${REFERENCE.source}, got ${JSON.stringify(input.reference)}`);
+  }
   for (const key of ["selector", "excerpt"]) {
     if (input[key] !== undefined && !isText(input[key])) problems.push(`$.${key}: must be a string`);
   }
@@ -182,9 +241,10 @@ export function validateRequest(input, layouts) {
   }
   if (problems.length) return { problems };
   const fields = { kind };
-  for (const key of ["slideId", "text", "selector", "excerpt", "layout"]) {
+  for (const key of ["slideId", "text", "selector", "excerpt", "layout", "theme", "reference"]) {
     if (input[key] !== undefined) fields[key] = input[key];
   }
+  if (THEME_KINDS.has(kind)) fields.mode = mode;
   return { problems: [], fields };
 }
 

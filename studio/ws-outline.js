@@ -10,6 +10,7 @@ import {
   render,
   savePlan,
   savePlanSoon,
+  sendMode,
   slideFrame,
   slidesInOrder,
   writingSlideId,
@@ -130,8 +131,21 @@ function row(slide, i) {
       ariaLabel: `Puntos de la diapositiva ${i + 1}, uno por línea`,
       placeholder: "Puntos, uno por línea",
     });
+    // S6: right under the textarea, the bullets exactly as the slide will render them.
+    const preview = el("ul", { className: "points-preview", ariaHidden: "true" });
+    const renderPreview = () => {
+      preview.replaceChildren(
+        ...points.value
+          .split("\n")
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .map((x) => el("li", { textContent: x })),
+      );
+    };
+    renderPreview();
     points.addEventListener("input", () => {
       points.rows = Math.max(1, points.value.split("\n").length);
+      renderPreview();
       mutate((p) => {
         p.slides[i].points = points.value
           .split("\n")
@@ -151,7 +165,7 @@ function row(slide, i) {
         else delete p.slides[i].notes;
       }, { now: false }),
     );
-    li.append(points, notes, acts(i, total, slide));
+    li.append(points, preview, notes, acts(i, total, slide));
   } else if (selected) {
     li.append(el("p", { className: "note", textContent: "Esta diapositiva no está en plan.json; solo se puede ver." }));
   }
@@ -178,7 +192,20 @@ function acts(i, total, slide) {
     return b;
   };
   bar.append(
-    el("span", {}, el("kbd", { textContent: "e" }), " editar"),
+    // S8a (artboard 05): once the slide is written, its content is edited on the slide;
+    // the outline row keeps the structural actions.
+    slide.status === "pending"
+      ? el("span", {}, el("kbd", { textContent: "e" }), " editar")
+      : (() => {
+          const go = el("button", { type: "button" }, "→ editar en la diapositiva");
+          go.dataset.act = "edit-slide";
+          go.title = `Editar el contenido de esta diapositiva (doble clic sobre un texto)`;
+          go.addEventListener("click", (event) => {
+            event.stopPropagation();
+            select(i, { slideMode: true });
+          });
+          return go;
+        })(),
     button("subir", "↑", "up", () => move(i, -1), i === 0),
     button("bajar", "↓", "down", () => move(i, 1), i === total - 1),
     button("combinar", "m", "merge", () => merge(i), i === total - 1),
@@ -213,14 +240,22 @@ function foot(slides) {
 
 // ---------- selection and keyboard (S5) ----------
 
-export function select(i, { focusTitle = false, focusRow = true } = {}) {
+export function select(i, { focusTitle = false, focusRow = true, slideMode = false } = {}) {
   const slide = slidesInOrder()[i];
   if (!slide) return;
   const changed = app.current !== slide.id;
+  const viewChanged = app.view !== "wire";
   app.current = slide.id;
-  // A written slide opens in the Slide view; a pending one keeps the current view.
-  if (slide.status !== "pending" && app.view !== "slide") applyView("slide");
-  if (changed || focusTitle) render();
+  // Selecting from the structure always opens the text-only wireframe (S7); the real slide is one click away.
+  if (viewChanged) applyView("wire");
+  if (changed || focusTitle || viewChanged) render();
+  // slideMode jumps straight into the written slide with edit mode on (S8a).
+  if (slideMode && slide.status !== "pending") {
+    applyView("slide");
+    app.mode = "edit";
+    render();
+    sendMode(document.querySelector("#stage .frame.big iframe"), "edit");
+  }
   const box = document.querySelector(`#outline .row[data-slide-id="${CSS.escape(slide.id)}"]`);
   if (focusTitle) box?.querySelector(".edit")?.focus();
   else if (focusRow) box?.focus();
@@ -247,7 +282,9 @@ function onRowKey(event, i, total) {
     else selectRelative(i, step);
   } else if (key === "e") {
     event.preventDefault();
-    select(i, { focusTitle: true });
+    // S8a: for a written slide, e edits content on the slide; for a pending one it edits the plan row.
+    if (slidesInOrder()[i].status !== "pending") select(i, { slideMode: true });
+    else select(i, { focusTitle: true });
   } else if (key === "m") {
     event.preventDefault();
     merge(i);

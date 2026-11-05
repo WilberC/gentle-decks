@@ -162,6 +162,8 @@ export function renderHeader() {
   progress.querySelector("i").style.width = `${pct}%`;
   document.getElementById("written").textContent = `${written} / ${slides.length} escritas`;
   document.getElementById("present").hidden = !st.deck?.exists;
+  document.getElementById("export").hidden = !st.deck?.exists;
+  document.getElementById("approve").hidden = !st.deck?.exists;
   const redo = document.getElementById("redo");
   const selected = selectedSlide();
   redo.disabled = !selected || selected.status === "pending";
@@ -187,6 +189,21 @@ export function renderStatus() {
   document.getElementById("status-requests").textContent = open
     ? `${open} ${open === 1 ? "petición abierta" : "peticiones abiertas"}`
     : "sin peticiones abiertas";
+  // S13: while a generate request is open, a banner states the queue and that nothing is required.
+  const queue = document.getElementById("queue");
+  if (!queue) return;
+  if (writing) {
+    const current = slides.find((s) => s.id === writing);
+    queue.replaceChildren(
+      el("b", { textContent: `✦ Escribiendo ${written} / ${slides.length}` }),
+      el("span", { textContent: current ? ` · en curso: “${current.title}”` : "" }),
+      el("span", { className: "q-hint", textContent: " · las diapositivas aparecen solas; podés seguir editando el esquema mientras esperás" }),
+    );
+    queue.hidden = false;
+  } else {
+    queue.hidden = true;
+    queue.replaceChildren();
+  }
 }
 
 export function render() {
@@ -227,8 +244,18 @@ async function onChange(rev, themes) {
   // re-renders, so a theme edit before any other change is not missed.
   const themesChanged = themes !== undefined && themes !== app.themesRev;
   if (themes !== undefined) app.themesRev = themes;
+  // S18-proofing note: plan edits must reach the wireframe center too. Request changes never
+  // touch frames, but the text-only Boceto is cheap and frame-free.
   if (!themesChanged && rev && (rev === app.state?.rev || rev === app.savedRev)) {
-    if (await loadState()) renderAreas();
+    // This change is the user's own save echoing back: never rebuild a pane under a focused field
+    // (it would drop the caret and typed text); the focusout handler refreshes when they leave (S1).
+    if (await loadState()) {
+      if (fieldFocused()) app.dirty = true;
+      else {
+        renderAreas();
+        if (app.view === "wire") renderCenter(centerEls());
+      }
+    }
     return;
   }
   if (fieldFocused()) {
@@ -344,6 +371,18 @@ document.getElementById("redo").addEventListener("click", async () => {
   if (!slide) return;
   const text = await ask({ title: `Rehacer “${slide.title}”`, hint: "¿Qué debe cambiar el agente en esta diapositiva?" });
   if (text) await postRequest({ kind: "redo", slideId: slide.id, text }, "Pedí al agente que rehaga la diapositiva.");
+});
+
+// S15: approving asks the agent for the final delivery and then the studio is shut down.
+document.getElementById("approve").addEventListener("click", async () => {
+  const ok = await ask({
+    title: "Aprobar la presentación",
+    hint: "El agente entregará el archivo final (Export) y apagará el studio: esta URL dejará de funcionar. ¿Aprobar?",
+    ok: "Aprobar y cerrar",
+    text: false,
+  });
+  if (ok === null) return;
+  await postRequest({ kind: "approve" }, "Aprobación enviada: el agente entrega y apaga el studio.");
 });
 
 document.getElementById("shortcuts").addEventListener("click", () => document.getElementById("help").showModal());

@@ -26,9 +26,20 @@ if (!EDGE) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "decks-smoke-"));
 const deckDir = path.join(work, "python-intro");
 fs.mkdirSync(deckDir);
+// S3: this deck proposes its own theme and the studio gets an isolated user themes dir, so
+// "Mis estilos" can be exercised without reading or writing the developer's ~/.config.
+const userThemes = path.join(work, "user-themes");
+fs.mkdirSync(userThemes);
+fs.mkdirSync(path.join(deckDir, "themes"));
+// The deck's proposal is a copy of a bundled theme, so the slides it renders keep a real layout.
+const DECK_THEME_FILE = path.join(deckDir, "themes", "studio.css");
+fs.copyFileSync(path.resolve("themes", "fair-test.css"), DECK_THEME_FILE);
 const format = fs.readFileSync("FORMAT.md", "utf8");
 fs.writeFileSync(path.join(deckDir, "plan.json"), format.split("## Plan file")[1].split("```json")[1].split("```")[0].trimStart());
-const studio = spawn(process.execPath, [CLI, "studio", deckDir], { stdio: ["ignore", "pipe", "inherit"] });
+const studio = spawn(process.execPath, [CLI, "studio", deckDir], {
+  stdio: ["ignore", "pipe", "inherit"],
+  env: { ...process.env, GENTLE_DECKS_THEMES: userThemes },
+});
 const url = await new Promise((resolve, reject) => {
   let out = "";
   studio.stdout.on("data", (d) => {
@@ -108,6 +119,25 @@ const results = [];
 const check = (name, ok, detail = "") => {
   results.push(`${ok ? "ok  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
 };
+// A 1x1 PNG: the reference the flow uploads.
+const PNG_1PX = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+// S1/S2: drive the hidden reference input the way the browser does after a pick — a real PNG File
+// through `change` — so the studio's own upload path runs end to end (base64 → POST api/references →
+// dialog → request → file on disk). The native file-chooser chrome belongs to the browser, not the
+// studio, so this covers everything from `change` on and not the OS dialog itself.
+const pickReference = async (selector) => {
+  await click(selector);
+  await until(`!!document.getElementById("reference-file")`, "reference file input");
+  await js(`(() => {
+    const bytes = Uint8Array.from(atob(${JSON.stringify(PNG_1PX)}), (c) => c.charCodeAt(0));
+    const input = document.getElementById("reference-file");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "marca.png", { type: "image/png" }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change"));
+    return true;
+  })()`);
+};
 const answerDialog = async (text) => {
   await until(`document.getElementById("dialog").open`, "dialog open");
   await js(`document.getElementById("dialog-text").value = ${JSON.stringify(text)}; document.getElementById("dialog-ok").click(); true`);
@@ -120,6 +150,8 @@ const selectedAct = (act) => `.outline .row[aria-current="true"] [data-act="${ac
 
 try {
   await send("Page.enable");
+  // The picker's OS dialog is not the studio's: intercept it so headless never waits on it.
+  await send("Page.setInterceptFileChooserDialog", { enabled: true }).catch(() => {});
   await send("Page.navigate", { url });
   await until(`!!document.querySelector(".look .theme")`, "Estilo view with theme cards");
   check(
@@ -136,6 +168,24 @@ try {
   await js(`document.querySelector('.outline .row[aria-current="true"] .edit').blur(); true`);
   await sleep(1200);
   check("edit title saves plan.json", plan().slides[0].title === "Por qué Python", plan().slides[0].title);
+
+  // S6: the bullet preview mirrors the points while editing.
+  await selectRow(1);
+  await until(`document.querySelectorAll(".points-preview li").length === 1`, "points preview bullets");
+  await setValue('.outline .row[aria-current="true"] .points', "Punto uno\nPunto dos");
+  await until(`document.querySelectorAll(".points-preview li").length === 2`, "points preview updates while typing");
+  await js(`document.querySelector('.outline .row[aria-current="true"] .points').blur(); true`);
+  await sleep(800);
+  check("points preview mirrors the saved points", plan().slides[1].points.join("|") === "Punto uno|Punto dos", plan().slides[1].points.join("|"));
+
+  // S7: selecting from the structure opens the text-only wireframe.
+  await selectRow(1);
+  await until(`document.querySelector('#tools [data-view="wire"]').getAttribute("aria-pressed") === "true"`, "wire view active");
+  check(
+    "wireframe shows the slide as text only",
+    (await js(`document.querySelector(".wire h2")?.textContent`)) === plan().slides[1].title
+      && (await js(`document.querySelectorAll(".wire-points li").length`)) === 2,
+  );
 
   // Add a slide after the last one.
   const before = plan().slides.length;
@@ -170,26 +220,159 @@ try {
   const planComment = requests().find((r) => r.kind === "comment" && r.text === "Hazlo más visual");
   check("plan comment posts a request", !!planComment, planComment ? planComment.slideId : "missing");
 
-  // Theme selection (any other theme than the current one).
+  // Back to Estilo (the row selects above left the center in Boceto).
+  await click('#tools [data-view="style"]');
+  await until(`!!document.querySelector(".theme")`, "theme cards visible again");
+
+  // S10: the Estilo view offers a clear way to ask the agent for a new theme.
+  const newThemeRequests = () => requests().filter((r) => r.kind === "propose-style" && r.mode === "new");
+  const proposeBefore = newThemeRequests().length;
+  await click("#propose-style");
+  await js(`document.getElementById("dialog").close(""); true`);
+  await sleep(400);
+  check("propose-style button sends nothing when cancelled (S10)", newThemeRequests().length === proposeBefore);
+  await click("#propose-style");
+  await answerDialog("Colores fríos de laboratorio, sin rosa");
+  await sleep(800);
+  const proposed = newThemeRequests()[0];
+  check(
+    "propose-style button asks the agent for a new theme (S10)",
+    !!proposed && proposed.text === "Colores fríos de laboratorio, sin rosa",
+    proposed ? `${proposed.mode} | ${proposed.text}` : "missing",
+  );
+
+  // S1: "📎 con referencia" uploads the picked file, names it in the dialog, and carries it in the request.
+  await pickReference("#propose-reference");
+  await until(`document.getElementById("dialog").open`, "reference dialog");
+  const refHint = await js(`document.getElementById("dialog-hint").textContent`);
+  await answerDialog("Con la paleta de la marca");
+  await sleep(1000);
+  const fromReference = requests().find((r) => r.kind === "propose-style" && r.mode === "new" && r.reference);
+  check(
+    "reference attach uploads the file and asks for a theme from it (S1)",
+    !!fromReference
+      && fromReference.reference === "references/marca.png"
+      && fromReference.text === "Con la paleta de la marca"
+      && refHint.includes("marca.png")
+      && fs.existsSync(path.join(deckDir, "references", "marca.png")),
+    fromReference ? `${fromReference.reference} | hint=${refHint.slice(0, 48)}` : "missing",
+  );
+
+  // S11: a card opens the theme detail: a big themed preview, the component legend, and the
+  // theme-level actions (choose / comment / improve).
   const otherTheme = await js(`(() => {
     const current = [...document.querySelectorAll(".theme")].find((t) => t.getAttribute("aria-pressed") === "true");
     const other = [...document.querySelectorAll(".theme")].find((t) => t !== current);
     return other ? other.dataset.theme : "";
   })()`);
   await click(`.theme[data-theme="${otherTheme}"]`);
+  await until(`!!document.querySelector(".theme-detail")`, "theme detail view");
+  const detail = await js(`(() => {
+    const box = document.querySelector(".theme-detail");
+    const frames = [...box.querySelectorAll(".preview .frame iframe")];
+    return {
+      frames: frames.length,
+      themed: frames.length > 0 && frames.every((f) => f.src.includes(${JSON.stringify(`theme=${otherTheme}`)})),
+      components: box.querySelectorAll(".components li code").length,
+    };
+  })()`);
+  check(
+    "theme detail shows a large themed preview and the component examples (S11)",
+    detail.frames >= 2 && detail.themed && detail.components === 7,
+    JSON.stringify(detail),
+  );
+  await click("#theme-comment");
+  await answerDialog("El título necesita más contraste");
+  await sleep(800);
+  const themedComment = requests().find((r) => r.kind === "propose-style" && r.mode === "comment");
+  check(
+    "theme comment posts a request for that theme (S11)",
+    !!themedComment && themedComment.theme === otherTheme && themedComment.text === "El título necesita más contraste",
+    themedComment ? `${themedComment.theme} | ${themedComment.text}` : "missing",
+  );
+  // S2: the detail can also improve the theme towards a reference file.
+  await pickReference("#theme-improve-reference");
+  await until(`document.getElementById("dialog").open`, "improve reference dialog");
+  await answerDialog("Acercalo a la marca");
+  await sleep(1000);
+  const improved = requests().find((r) => r.kind === "propose-style" && r.mode === "improve" && r.reference);
+  check(
+    "theme detail improves a theme from a reference (S2)",
+    !!improved
+      && improved.theme === otherTheme
+      && improved.reference === "references/marca.png"
+      && improved.text === "Acercalo a la marca",
+    improved ? `${improved.theme} | ${improved.reference}` : "missing",
+  );
+  await click("#theme-choose");
   await sleep(700);
   check("theme click sets plan.theme", plan().theme === otherTheme, `${otherTheme} / ${plan().theme}`);
+  // The detail is a stage inside Estilo: go back so Generate stays reachable.
+  await click("#theme-back");
+  await until(`!!document.querySelector("#generate")`, "Estilo card list after the theme detail");
+
+  // S3: "Mis estilos" manages my own themes: save the deck's proposal as mine, then delete it.
+  await click('#tools [data-view="mine"]');
+  await until(`document.querySelector('#tools [data-view="mine"]').getAttribute("aria-pressed") === "true"`, "Mis estilos view");
+  check(
+    "Mis estilos shows the empty state and the deck's proposal (S3)",
+    (await js(`!!document.getElementById("mine-empty")`)) && (await js(`!!document.getElementById("mine-promote-studio")`)),
+  );
+  await click("#mine-promote-studio");
+  await until(`!!document.getElementById("mine-choose-studio")`, "promoted theme listed under mine");
+  check(
+    "Guardar como mío copies the deck theme into the user themes dir (S3)",
+    fs.existsSync(path.join(userThemes, "studio.css")) && !(await js(`!!document.getElementById("mine-empty")`)),
+  );
+  await click("#mine-delete-studio");
+  await until(`document.getElementById("dialog").open`, "delete confirmation");
+  const deleteHint = await js(`document.getElementById("dialog-hint").textContent`);
+  await js(`document.getElementById("dialog-ok").click(); true`);
+  await until(`!document.getElementById("mine-choose-studio")`, "theme removed from mine");
+  check(
+    "Borrar removes only my copy and keeps the deck theme (S3)",
+    !fs.existsSync(path.join(userThemes, "studio.css")) && fs.existsSync(DECK_THEME_FILE),
+    deleteHint.slice(0, 70),
+  );
+  await until(`!!document.querySelector(".mine .theme .frame iframe")`, "deck proposal preview still renders");
+  check(
+    "the deck proposal is still listed after deleting my copy (S3)",
+    await js(`!!document.getElementById("mine-promote-studio")`),
+  );
+  await click('#tools [data-view="style"]');
+  await until(`!!document.querySelector("#generate")`, "Estilo card list before generating");
 
   // Generate.
   await click("#generate");
   await until(`document.querySelector('#tools [data-view="grid"]').getAttribute("aria-pressed") === "true"`, "Grid view after generate");
   check("generate posts a request and opens the Grid view", requests().some((r) => r.kind === "generate"));
 
+  // S13: while the agent writes, a visible banner states the queue and that nothing is required.
+  await until(`!document.getElementById("queue").hidden`, "writing banner visible");
+  check(
+    "writing banner states the queue while generating",
+    (await js(`document.getElementById("queue").textContent`)).includes("Escribiendo"),
+  );
+
   // Agent writes the deck after "generate".
   execFileSync(process.execPath, [CLI, "plan", "scaffold", path.join(deckDir, "plan.json"), "-o", path.join(deckDir, path.basename(deckDir) + ".md")]);
   await until(`document.querySelectorAll(".outline .row .th .frame").length >= 2`, "outline thumbnails fill live from SSE", 8000);
   await until(`document.querySelectorAll(".grid .frame").length >= 2`, "grid fills live from SSE", 8000);
   check("outline thumbnails and grid fill live after the agent writes the deck", true);
+  await until(`document.querySelectorAll(".grid .frame").length === ${plan().slides.length}`, "every slide rendered in the grid", 15000);
+  // The agent resolves the generate request when it finishes writing; the banner then clears (S13).
+  const gen = requests().find((r) => r.kind === "generate");
+  execFileSync(process.execPath, [CLI, "studio", "resolve", deckDir, gen.id], { stdio: "ignore" });
+  await until(`document.getElementById("queue").hidden`, "writing banner clears when done");
+  check("writing banner hides once the generate request is resolved", true);
+
+  // Boceto of a written slide offers the real slide one click away (S7).
+  await selectRow(0);
+  await until(`document.querySelector('#tools [data-view="wire"]').getAttribute("aria-pressed") === "true"`, "wire view for written slide");
+  check(
+    "written slide wireframe links to the real slide",
+    (await js(`!!document.querySelector(".wire .btn")`)) && (await js(`document.querySelectorAll(".wire-points li").length`)) >= 1,
+  );
 
   // Slide view: comment mode click inside the slide.
   await click('#tools [data-view="slide"]');
@@ -204,10 +387,16 @@ try {
   const pick = requests().find((r) => r.text === "Título más corto");
   check("editor comment carries selector and excerpt", !!pick && !!pick.selector, pick ? `${pick.selector} | ${pick.excerpt}` : "missing");
 
-  // Layout switch.
+  // Layout switch: the select must confirm before firing (S4); cancelling sends nothing.
+  const layoutBefore = requests().filter((r) => r.kind === "layout").length;
   await setValue("#layout-select", "steps", "change");
+  await js(`document.getElementById("dialog").close(""); true`);
+  await sleep(400);
+  check("layout select fires nothing when cancelled", requests().filter((r) => r.kind === "layout").length === layoutBefore);
+  await setValue("#layout-select", "steps", "change");
+  await answerDialog("");
   await sleep(800);
-  check("layout select posts a layout request", requests().some((r) => r.kind === "layout" && r.layout === "steps"));
+  check("layout select posts a layout request after confirming", requests().some((r) => r.kind === "layout" && r.layout === "steps"));
 
   // Comments column lists open requests, with the reply column available.
   await click('#comments .tabs [data-tab="all"]');
@@ -226,11 +415,48 @@ try {
   await sleep(800);
   check("composer posts a comment for the selected slide", requests().some((r) => r.text === "Que el ejemplo se vea en pantalla"));
 
+  // S14: several comments can be queued and sent to the agent together.
+  const openBefore = requests().filter((r) => r.kind === "comment").length;
+  await setValue("#compose", "Primer comentario en cola");
+  await click("#compose-queue");
+  await setValue("#compose", "Segundo comentario en cola");
+  await click("#compose-queue");
+  await until(`document.getElementById("send-all")?.textContent.includes("2")`, "queue shows two pending comments");
+  await click("#send-all");
+  await sleep(1200);
+  const queuedTexts = requests().filter((r) => r.kind === "comment").slice(openBefore).map((r) => r.text);
+  check("queued comments reach the agent together",
+    queuedTexts.includes("Primer comentario en cola") && queuedTexts.includes("Segundo comentario en cola"),
+    queuedTexts.join(" | "));
+
+  // S15: approve posts the request that tells the agent to deliver and stop the studio.
+  await click("#approve");
+  await answerDialog("");
+  await sleep(600);
+  check("approve posts the close request (S15)", requests().some((r) => r.kind === "approve"));
+
+  // S1: a live change must not destroy text being typed in the composer.
+  await setValue("#compose", "Borrador a medio escribir");
+  await js(`document.getElementById("compose").blur(); true`);
+  const resolvable = requests().find((r) => r.kind === "comment" && r.status === "open");
+  if (resolvable) execFileSync(process.execPath, [CLI, "studio", "resolve", deckDir, resolvable.id], { stdio: "ignore" });
+  await sleep(1500);
+  check(
+    "live update keeps the composer draft",
+    (await js(`document.getElementById("compose").value`)) === "Borrador a medio escribir",
+  );
+
   // Edit text: click the cover bullet, type, Enter -> deck markdown changes for that slide only.
   const deckFile = path.join(deckDir, path.basename(deckDir) + ".md");
   const mdBefore = fs.readFileSync(deckFile, "utf8");
   await click('#tools [data-mode="edit"]');
   await sleep(300);
+  // S8a (artboard 05): edit mode shows a floating status badge, dismissible with its ×.
+  await until(`!document.getElementById("edit-float").hidden`, "edit mode float badge visible");
+  await click("#edit-float .x");
+  await until(`!document.getElementById("edit-float")`, "edit float dismissed");
+  await click('#tools [data-mode="edit"]');
+  await until(`!document.getElementById("edit-float").hidden`, "edit float returns with edit mode");
   await clickInFrame("#stage .frame.big", 0.3, 0.545);
   await sleep(400);
   await send("Input.dispatchKeyEvent", { type: "keyDown", key: "End", code: "End", windowsVirtualKeyCode: 35 });
@@ -244,6 +470,17 @@ try {
     changed && mdAfter.replace(" hoy", "") === mdBefore,
     changed ? (mdAfter.match(/.*hoy.*/) || [""])[0].trim() : "deck unchanged",
   );
+
+  // S8a (artboard 05): dragging an element in edit mode asks the agent to move it.
+  const moveBefore = requests().filter((r) => r.kind === "move").length;
+  const frame = await js(`(() => { const r = document.querySelector("#stage .frame.big").getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })()`);
+  const from = { x: Math.round(frame.x + frame.w * 0.45), y: Math.round(frame.y + frame.h * 0.45) };
+  await send("Input.dispatchMouseEvent", { type: "mousePressed", x: from.x, y: from.y, button: "left", clickCount: 1 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + 30, y: from.y + 40 });
+  await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: from.x + 60, y: from.y + 80 });
+  await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: from.x + 60, y: from.y + 80, button: "left" });
+  await sleep(1200);
+  check("drag in edit mode posts a move request", requests().filter((r) => r.kind === "move").length > moveBefore);
 
   // Skins: the switch persists across reload, and ?skin= overrides on load (S4).
   await click('.skin-switch button[data-skin="flat"]');

@@ -79,6 +79,7 @@ Nesting is supported (a container inside a container).
 | `bars` | List items: `- Label \| 85 \| good` (tone: `good`, `mid`, `bad`). |
 | `stat` `big=4.2x` `small=más rápido` | Big number with a caption. |
 | `pills` | List items, one pill each. |
+| `figure` `src=images/x.png` `alt=TEXT` `caption=TEXT` | Embedded image with optional caption; quote values that contain spaces (`alt="Un punto"`). `src` is required: a local path relative to the deck file or an http(s) URL. Every build embeds readable images as data URIs, so exports and PDF prints never lose them. |
 
 ## Example slide
 
@@ -150,6 +151,13 @@ A missing theme fails the build with `build failed: theme not found: <name>`.
 `decks theme check <name>` resolves a name in the user themes directory, then
 in the bundled `themes/`. See [docs/themes.md](docs/themes.md) for the layout
 and how to keep your own themes.
+
+### Visual rule
+
+A presentation is never text alone: every content slide carries one visual
+element — a `figure` image, a `bars`/`stat`/`term` component, a table, or a
+structured layout (`steps`, `grid`). A wall of bullet points is a defect, not
+a style.
 
 ## Deck directory and studio
 

@@ -70,12 +70,19 @@ export function parseContainers(body) {
   for (const line of lines) {
     const open = line.match(OPEN);
     if (open) {
-      const mods = open[2].trim().split(/\s+/).filter((t) => t && !t.includes("="));
+      // Quoted attribute values may contain spaces: strip `key=value` spans first, then the
+      // remaining bare words are the modifiers.
+      const attrs = {};
+      const rest = open[2].replace(/([\w-]+)\s*=\s*("([^"]*)"|\S+)/g, (m, key, value, quoted) => {
+        attrs[key] = quoted !== undefined ? quoted : value;
+        return " ";
+      });
+      const mods = rest.trim().split(/\s+/).filter(Boolean);
       const node = {
         type: "container",
         name: open[1],
         mods,
-        attrs: parseAttrs(open[2]),
+        attrs,
         children: [],
       };
       stack[stack.length - 1].children.push(node);

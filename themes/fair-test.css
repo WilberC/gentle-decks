@@ -36,6 +36,7 @@
   .slide {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; justify-content: flex-start;
+    gap: 2.2vh;
     overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
     scrollbar-width: thin; scrollbar-color: var(--line) transparent;
     padding: 6.5vh 7vw 8vh;
@@ -108,6 +109,11 @@
   .pill:nth-child(3) { color: var(--s3-ink); background: var(--s3); }
   .pill:nth-child(4) { color: var(--s4-ink); background: var(--s4); }
   .pill:nth-child(5) { color: var(--s5-ink); background: var(--s5); }
+
+  /* figure: an embedded image with its caption */
+  .figure { margin: 0; display: grid; gap: .8vh; }
+  .figure img { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--border-subtle); }
+  .figure figcaption { font: .85rem var(--mono); color: var(--ink-2, var(--ink)); opacity: .75; }
 
   /* big numbers: a mono measurement with the artboard's colored rule */
   .stat {
@@ -259,6 +265,8 @@
   /* print / PDF: one slide per page */
   @media print {
     @page { size: 1600px 900px; margin: 0; }
+    /* shadows rasterize at low print DPI and read as blur on paper: drop them for export */
+    .slide * { box-shadow: none; }
     html, body { overflow: visible; height: auto; }
     .deck { height: auto; }
     .slide { position: relative; width: 1600px; height: 900px; opacity: 1; transform: none; overflow: visible; page-break-after: always; break-after: page; }

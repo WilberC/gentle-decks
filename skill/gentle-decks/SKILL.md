@@ -21,6 +21,12 @@ Do not hand-write slide HTML and do not use gentle-design artboards for decks.
   An unknown container fails the build: fix the markdown, never work around it.
 - Realistic content for the stated audience; no lorem ipsum.
 - One idea per slide. A slide that needs scrolling at 1600×900 is too dense: split it.
+- Every content slide carries one visual element: a `::: figure` image, a
+  `bars`/`stat`/`term` component, a table, or a structured layout (`steps`,
+  `grid`). Never deliver a run of text-only slides; prefer a figure whose data
+  comes from the slide's own text. Reference real image files under the deck
+  directory (`images/...`) or http(s) URLs: builds embed images as data URIs,
+  so exports and PDFs keep them.
 - Write the deck in the language the user asked for; set `lang:` to match.
 - Iterating edits only the slides concerned. Never rewrite the whole deck to fix one slide.
 
@@ -63,8 +69,10 @@ Read its `FORMAT.md` before writing the first slide of a session.
    decks) and, when none fits, propose one or two more for this topic and audience: write each as `decks/<slug>/themes/<name>.css`
    following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
    until it prints `ok`. Keep the existing themes as options; the studio also
-   lists the user's own themes from the user themes directory. When the user
-   wants to reuse a proposed theme in other decks, copy it into the user themes
+   lists the user's own themes from the user themes directory, and its
+   **Mis estilos** view saves a proposed theme as the user's (**Guardar como mío**)
+   or deletes one of the user's own copies. When the user wants to reuse a
+   proposed theme in other decks outside the studio, copy it into the user themes
    directory (create it if needed) only after they confirm the destination.
 4. **Open the studio.** Start it in the background and watch its output:
    `node <decks-repo>/bin/decks.js studio decks/<slug>` prints
@@ -72,7 +80,7 @@ Read its `FORMAT.md` before writing the first slide of a session.
    line per user action. Use a monitor (for example the `monitor` tool on that
    command) so each line reaches you as it happens. Give the user the URL.
    The studio is one workspace: the outline stays on the left, the center
-   switches between Estilo, Slide and Grid, and comments are threads on the right.
+   switches between Estilo, Mis estilos, Slide and Grid, and comments are threads on the right.
    Before generation the user edits the outline (text, add, merge, move,
    delete, comment) and picks a theme; the studio writes `plan.json` directly.
    Without the studio (no browser), show the outline as a numbered list in chat
@@ -86,8 +94,33 @@ Read its `FORMAT.md` before writing the first slide of a session.
    to catch `build failed` errors and fix the reported slide.
 6. **Refine.** Handle every open request (below) as it arrives, then resolve it.
 7. **Deliver.** `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md -o decks/<slug>/<slug>.html`
-   produces the single navigable file (arrows/swipe, `F` fullscreen, `P` PDF export).
-   The studio's **Present** link shows the same file live.
+   produces the single navigable file (arrows/swipe, `F` fullscreen, `P` PDF export;
+   images embedded as data URIs, slides in the established plan order).
+   The studio's **Present** link shows the same file live. When the user posts an
+   `approve` request (the **✓ Aprobar y cerrar** button), deliver the final file, resolve
+   the request, and stop the studio: `node <decks-repo>/bin/decks.js studio stop decks/<slug>`.
+
+## Delegation (keep the orchestrator thin)
+
+The orchestrating agent owns the conversation, the studio lifecycle, and
+acceptance. Heavy production work goes to subagent workers so the main
+context stays small (S16):
+
+- **Generate (step 5):** delegate the slide writing in sequential batches of
+  3–5 slides. Give each worker the deck file path, the exact plan entries
+  (`id`, `title`, `points`, `notes`, `layout`) for its batch, the
+  `FORMAT.md` path, and the visual rule; the worker writes its slides to the
+  markdown and saves. Batches run in order (never in parallel: one shared
+  file), so the studio grid still fills live between batches. The
+  orchestrator reads the result, rebuilds with `-o` once at the end, and
+  fixes any `build failed` line itself or with a follow-up worker.
+- **Refine (step 6):** when several requests queue up, delegate their
+  application to one worker: pass the open-requests JSON (`studio requests`),
+  the relevant slide excerpts, and `FORMAT.md`; the worker edits, rebuilds to
+  verify, and resolves each id with `studio resolve … --reply`. The
+  orchestrator reads the worker's summary and reports to the user.
+- **Never delegate:** the brief, the questionnaire, chat replies, theme
+  selection with the user, and the final delivery decision.
 
 ## Studio requests
 
@@ -110,6 +143,15 @@ Keep replies to one or two sentences in the user's language.
 | `layout` | Rewrite slide `slideId` with the container `layout`, keeping its content. |
 | `add-slide` | Add a slide after `slideId` about `text`, in `plan.json` and in the deck, with a new unique id. |
 | `overflow` | Slide `slideId` is taller than 1600×900: shorten it or split it into two slides. |
+| `move` | Slide `slideId`: the user dragged an element in Edit mode; `selector`/`excerpt` name it. Move that element in the slide's markdown (reorder the block), keeping its content. |
+| `propose-style` | Theme work, by `mode`: `new` proposes a theme for this deck (honor `text` as the look; there is no `theme` field); `improve` edits the CSS of `theme` following `text` (may be empty); `comment` answers the user's `text` about `theme`. Write the CSS to `decks/<slug>/themes/<name>.css`, follow `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css` until it prints `ok`. |
+| `propose-style` with `reference` | The same request may also carry `reference`, a path relative to the deck dir (e.g. `references/marca.png`): the user attached that image or PDF in the studio. Read the file **before** writing the CSS — an image: look at it and derive its palette, typography and character; a PDF: extract its palette and visual hierarchy. Then write the theme as above and run `theme check` as usual. |
+| `approve` | The user approved the deck: deliver the final file (`-o` build), resolve the request with what was delivered, then stop the studio with `decks studio stop <deck-dir>`; the URL stops working. |
+
+A `propose-style` request has no slide, so it never appears in a slide thread:
+answer it with `studio reply` on its own id and resolve it once the CSS is written
+and checked. Never pick the new theme for the user either: the studio lists it as
+*propuesto* and the user chooses it.
 
 Text edits made in the studio's Edit mode are already written to the deck; do
 not undo them. Resolve each request only after the change is saved; leave a

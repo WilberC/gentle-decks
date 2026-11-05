@@ -6,12 +6,14 @@ export const SLIDE_H = 900;
 // Container names the renderer accepts (src/render.js CONTAINER_NAMES, minus the inline `step`).
 export const LAYOUTS = ["grid-2", "grid-3", "grid-4", "split", "steps", "card", "term", "bars", "stat", "pills"];
 
-export const VIEWS = ["style", "slide", "grid"];
+export const VIEWS = ["style", "wire", "slide", "grid", "mine"];
 // S3: canonical hashes, plus the hashes of the replaced stage screens as aliases.
 const ALIASES = new Map([
   ["style", "style"],
+  ["wire", "wire"],
   ["slide", "slide"],
   ["grid", "grid"],
+  ["mine", "mine"],
   ["plan", "style"],
   ["editor", "slide"],
 ]);
@@ -22,10 +24,12 @@ export const app = {
   chosenView: false, // the user picked a view; stop defaulting
   mode: "view", // slide mode: "view" | "comment" | "edit"
   current: null, // selected slide id
+  theme: null, // S11: theme name whose detail is open in the Estilo stage
   tab: "this", // comments tab: "this" | "all" | "agent"
   overflow: new Map(), // slide id -> boolean (gd:ready overflow)
   heights: new Map(), // slide id -> scrollHeight reported by gd:ready
   overflowSent: new Set(), // slide ids already reported once
+  drafts: new Map(), // slide id -> composer draft, so re-renders never lose typed text
   savedRev: null,
   dirty: false, // a re-render waits for the user to leave a field
   live: "connecting", // SSE state: "connecting" | "on" | "off"
@@ -129,8 +133,9 @@ export function notify(text, tone = "info") {
   setTimeout(() => item.remove(), tone === "error" ? 9000 : 5000);
 }
 
-// Resolves to the typed text, "" for confirm-only dialogs, or null when cancelled.
-export function ask({ title, hint = "", value = "", ok = "Enviar", text = true }) {
+// Resolves to the typed text, "" for confirm-only dialogs or optional text confirmed empty,
+// or null when cancelled.
+export function ask({ title, hint = "", value = "", ok = "Enviar", text = true, required = true }) {
   const dialog = document.getElementById("dialog");
   const area = document.getElementById("dialog-text");
   document.getElementById("dialog-title").textContent = title;
@@ -148,7 +153,8 @@ export function ask({ title, hint = "", value = "", ok = "Enviar", text = true }
         if (dialog.returnValue !== "ok") return resolve(null);
         if (!text) return resolve("");
         const v = area.value.trim();
-        resolve(v ? v : null);
+        if (v) return resolve(v);
+        resolve(required ? null : "");
       },
       { once: true },
     );

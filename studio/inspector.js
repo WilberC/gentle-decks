@@ -4,6 +4,7 @@
 //   { type: "gd:ready", slideId, overflow, height }   on load and resize
 //   { type: "gd:pick", slideId, selector, excerpt, text } on click in comment or edit mode
 //   { type: "gd:edit", slideId, before, after }       on blur of an edited text element
+//   { type: "gd:move", slideId, selector, excerpt }    on drag of an element in edit mode
 // Parent -> artboard: { type: "gd:mode", mode: "view" | "comment" | "edit" }
 (() => {
   "use strict";
@@ -102,12 +103,71 @@
     "click",
     (event) => {
       if (mode === "view" || editing) return;
+      if (dragged) {
+        // The click after a drag belongs to the move gesture, not to an edit or comment.
+        dragged = false;
+        return;
+      }
       const target = textTarget(event.target);
       if (!target) return;
       event.preventDefault();
       const text = squash(target.textContent);
       post({ type: "gd:pick", selector: selectorFor(target), excerpt: text.slice(0, 160), text });
       if (mode === "edit" && canEdit(target)) startEdit(target);
+    },
+    true,
+  );
+
+  // S8a (artboard 05): dragging an element in edit mode asks the agent to move it. A small
+  // threshold separates a drag from a click; the click handler skips the gesture that dragged.
+  let dragged = false;
+  let dragFrom = null;
+  document.addEventListener(
+    "mousedown",
+    (event) => {
+      dragged = false;
+      dragFrom = mode === "edit" && !editing ? { x: event.clientX, y: event.clientY, target: textTarget(event.target) } : null;
+    },
+    true,
+  );
+  document.addEventListener(
+    "mousemove",
+    (event) => {
+      if (!dragFrom || dragged) return;
+      if (Math.abs(event.clientX - dragFrom.x) + Math.abs(event.clientY - dragFrom.y) > 8) {
+        dragged = true;
+        const target = dragFrom.target;
+        dragFrom = null;
+        if (target) post({ type: "gd:move", selector: selectorFor(target), excerpt: squash(target.textContent).slice(0, 160) });
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    "mouseup",
+    () => {
+      dragFrom = null;
+    },
+    true,
+  );
+
+  // Previews are sandboxed: never navigate the artboard away through a content link.
+  document.addEventListener(
+    "click",
+    (event) => {
+      const link = event.target.closest && event.target.closest("a[href]");
+      if (link) event.preventDefault();
+    },
+    true,
+  );
+
+  // Double-click is the announced affordance for editing text on the slide (artboard 05).
+  document.addEventListener(
+    "dblclick",
+    (event) => {
+      if (mode !== "edit" || editing) return;
+      const target = canEdit(event.target) ? event.target : textTarget(event.target);
+      if (target && canEdit(target)) startEdit(target);
     },
     true,
   );
@@ -152,6 +212,8 @@
     style.textContent = [
       ':root[data-gd-mode="comment"] .slide * { cursor: crosshair; }',
       ':root[data-gd-mode="edit"] .slide * { cursor: text; }',
+      // S8a: editable blocks announce themselves on hover while editing (artboard 05).
+      ':root[data-gd-mode="edit"] .slide :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, figcaption, td, th, dt, dd, pre):hover { outline: 1px dashed rgba(79,140,255,.75); outline-offset: 2px; border-radius: 2px; }',
       '[data-gd-editing="true"] { outline: 2px solid #4f8cff; outline-offset: 2px; border-radius: 2px; }',
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
