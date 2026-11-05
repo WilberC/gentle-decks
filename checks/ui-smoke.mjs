@@ -108,6 +108,25 @@ const results = [];
 const check = (name, ok, detail = "") => {
   results.push(`${ok ? "ok  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
 };
+// A 1x1 PNG: the reference the flow uploads.
+const PNG_1PX = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+// S1/S2: drive the hidden reference input the way the browser does after a pick — a real PNG File
+// through `change` — so the studio's own upload path runs end to end (base64 → POST api/references →
+// dialog → request → file on disk). The native file-chooser chrome belongs to the browser, not the
+// studio, so this covers everything from `change` on and not the OS dialog itself.
+const pickReference = async (selector) => {
+  await click(selector);
+  await until(`!!document.getElementById("reference-file")`, "reference file input");
+  await js(`(() => {
+    const bytes = Uint8Array.from(atob(${JSON.stringify(PNG_1PX)}), (c) => c.charCodeAt(0));
+    const input = document.getElementById("reference-file");
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], "marca.png", { type: "image/png" }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change"));
+    return true;
+  })()`);
+};
 const answerDialog = async (text) => {
   await until(`document.getElementById("dialog").open`, "dialog open");
   await js(`document.getElementById("dialog-text").value = ${JSON.stringify(text)}; document.getElementById("dialog-ok").click(); true`);
@@ -120,6 +139,8 @@ const selectedAct = (act) => `.outline .row[aria-current="true"] [data-act="${ac
 
 try {
   await send("Page.enable");
+  // The picker's OS dialog is not the studio's: intercept it so headless never waits on it.
+  await send("Page.setInterceptFileChooserDialog", { enabled: true }).catch(() => {});
   await send("Page.navigate", { url });
   await until(`!!document.querySelector(".look .theme")`, "Estilo view with theme cards");
   check(
@@ -209,6 +230,23 @@ try {
     proposed ? `${proposed.mode} | ${proposed.text}` : "missing",
   );
 
+  // S1: "📎 con referencia" uploads the picked file, names it in the dialog, and carries it in the request.
+  await pickReference("#propose-reference");
+  await until(`document.getElementById("dialog").open`, "reference dialog");
+  const refHint = await js(`document.getElementById("dialog-hint").textContent`);
+  await answerDialog("Con la paleta de la marca");
+  await sleep(1000);
+  const fromReference = requests().find((r) => r.kind === "propose-style" && r.mode === "new" && r.reference);
+  check(
+    "reference attach uploads the file and asks for a theme from it (S1)",
+    !!fromReference
+      && fromReference.reference === "references/marca.png"
+      && fromReference.text === "Con la paleta de la marca"
+      && refHint.includes("marca.png")
+      && fs.existsSync(path.join(deckDir, "references", "marca.png")),
+    fromReference ? `${fromReference.reference} | hint=${refHint.slice(0, 48)}` : "missing",
+  );
+
   // S11: a card opens the theme detail: a big themed preview, the component legend, and the
   // theme-level actions (choose / comment / improve).
   const otherTheme = await js(`(() => {
@@ -240,6 +278,20 @@ try {
     "theme comment posts a request for that theme (S11)",
     !!themedComment && themedComment.theme === otherTheme && themedComment.text === "El título necesita más contraste",
     themedComment ? `${themedComment.theme} | ${themedComment.text}` : "missing",
+  );
+  // S2: the detail can also improve the theme towards a reference file.
+  await pickReference("#theme-improve-reference");
+  await until(`document.getElementById("dialog").open`, "improve reference dialog");
+  await answerDialog("Acercalo a la marca");
+  await sleep(1000);
+  const improved = requests().find((r) => r.kind === "propose-style" && r.mode === "improve" && r.reference);
+  check(
+    "theme detail improves a theme from a reference (S2)",
+    !!improved
+      && improved.theme === otherTheme
+      && improved.reference === "references/marca.png"
+      && improved.text === "Acercalo a la marca",
+    improved ? `${improved.theme} | ${improved.reference}` : "missing",
   );
   await click("#theme-choose");
   await sleep(700);

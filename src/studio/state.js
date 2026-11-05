@@ -192,6 +192,9 @@ const THEME_MODES = ["new", "improve", "comment"];
 const THEME_KINDS = new Set(["propose-style"]);
 // A theme name is a CSS file stem in the deck's themes dir, never a path (S11).
 const THEME_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+// S1: a reference file the studio uploaded under the deck, relative to the deck dir, never a path
+// out of it. The server also reuses this pattern before it touches the filesystem.
+export const REFERENCE = /^references\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const isText = (value) => typeof value === "string";
 
 // Validates a POST api/requests body; returns `{ problems, fields }` with only known keys in `fields`.
@@ -225,6 +228,11 @@ export function validateRequest(input, layouts) {
   if (input.theme !== undefined && (!isText(input.theme) || !THEME_NAME.test(input.theme))) {
     problems.push(`$.theme: must match ${THEME_NAME.source}, got ${JSON.stringify(input.theme)}`);
   }
+  // S1: an optional reference the agent must read before writing the CSS. State stays pure here; the
+  // server checks that the file actually exists, where the deck paths are known.
+  if (input.reference !== undefined && (!isText(input.reference) || !REFERENCE.test(input.reference))) {
+    problems.push(`$.reference: must match ${REFERENCE.source}, got ${JSON.stringify(input.reference)}`);
+  }
   for (const key of ["selector", "excerpt"]) {
     if (input[key] !== undefined && !isText(input[key])) problems.push(`$.${key}: must be a string`);
   }
@@ -233,7 +241,7 @@ export function validateRequest(input, layouts) {
   }
   if (problems.length) return { problems };
   const fields = { kind };
-  for (const key of ["slideId", "text", "selector", "excerpt", "layout", "theme"]) {
+  for (const key of ["slideId", "text", "selector", "excerpt", "layout", "theme", "reference"]) {
     if (input[key] !== undefined) fields[key] = input[key];
   }
   if (THEME_KINDS.has(kind)) fields.mode = mode;

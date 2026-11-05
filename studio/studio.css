@@ -163,6 +163,9 @@ h1, h2, h3 { margin: 0; }
 .theme .name { display: flex; justify-content: space-between; gap: 8px; font: 12.5px var(--mono); }
 .theme .name small { color: var(--secondary); }
 .look-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.look-head .look-acts { display: flex; align-items: center; gap: 8px; }
+.look-head .attach { font: 12px var(--mono); color: var(--secondary); }
+.look-head .attach:hover { color: var(--accent); }
 .look-head .propose { font: 12px var(--mono); color: var(--accent); border-color: var(--accent); }
 .look-head .propose:hover { border-color: var(--accent-soft); }
 

@@ -17,6 +17,7 @@ import {
   readDeck,
   readPlanDocument,
   readRequests,
+  REFERENCE,
   resolvedRequests,
   slideStates,
   studioPaths,
@@ -26,6 +27,13 @@ import {
 } from "./state.js";
 
 export const MAX_BODY = 1024 * 1024;
+// S1: a reference image or PDF is far bigger than a request body, so this route has its own cap.
+// Every other route keeps MAX_BODY.
+export const MAX_REFERENCE_BODY = 12 * 1024 * 1024;
+// S1: only files an agent can look at or read are accepted, plus the name conventions for storing them.
+const REFERENCE_EXT = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".svg", ".pdf"]);
+const REFERENCE_STEM_MAX = 64;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const LOOPBACK = "127.0.0.1";
 const POLL_MS = 250;
 const HEARTBEAT_MS = 15000;
@@ -60,18 +68,18 @@ const notFound = (req, res) => {
 };
 
 // Reads a JSON body, draining oversized payloads so the client still gets its 413.
-async function readJson(req) {
+async function readJson(req, limit = MAX_BODY) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) {
+    if (size > limit) {
       chunks.length = 0;
       continue;
     }
     chunks.push(chunk);
   }
-  if (size > MAX_BODY) return { tooLarge: true };
+  if (size > limit) return { tooLarge: true };
   try {
     return { value: JSON.parse(Buffer.concat(chunks).toString("utf8")) };
   } catch {
@@ -269,6 +277,29 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     return json(res, 200, { rev: deckRev(paths) });
   }
 
+  // S1: the user attached a reference image or PDF to a theme request, so the agent can read it while
+  // it writes the CSS. The name is reduced to one safe basename and the extension must be known.
+  async function postReference(req, res) {
+    const body = await readJson(req, MAX_REFERENCE_BODY);
+    if (body.tooLarge) return json(res, 413, { error: "too-large" });
+    if (body.invalid) return json(res, 422, { error: "invalid", problems: ["$: invalid JSON"] });
+    const value = body.value && typeof body.value === "object" ? body.value : {};
+    // Only the basename survives, so a name can never walk out of the deck's references dir.
+    const base = typeof value.name === "string" ? value.name.split(/[\\/]/).pop() : "";
+    const ext = path.extname(base).toLowerCase();
+    const stem = path.basename(base, path.extname(base)).slice(0, REFERENCE_STEM_MAX);
+    const data = typeof value.data === "string" ? value.data.trim() : "";
+    const problems = [];
+    if (!base) problems.push("$.name: must be a non-empty filename");
+    else if (!REFERENCE_EXT.has(ext)) problems.push(`$.name: extension must be one of ${[...REFERENCE_EXT].join(", ")}`);
+    else if (!ASSET.test(stem)) problems.push(`$.name: must match ${ASSET.source}`);
+    if (!data || !BASE64.test(data)) problems.push("$.data: must be a non-empty base64 string");
+    if (problems.length) return json(res, 422, { error: "invalid", problems });
+    const stored = `${stem}${ext}`;
+    writeAtomic(path.join(paths.dir, "references", stored), Buffer.from(data, "base64"));
+    return json(res, 200, { reference: `references/${stored}` });
+  }
+
   // S9: validates and appends one request, prints the bridge line, and dedupes open overflow reports.
   async function postRequest(req, res) {
     const body = await readJson(req);
@@ -276,6 +307,10 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     if (body.invalid) return json(res, 422, { error: "invalid", problems: ["$: invalid JSON"] });
     const { problems, fields } = validateRequest(body.value, CONTAINER_NAMES);
     if (problems.length) return json(res, 422, { error: "invalid", problems });
+    // S1: a reference only counts when the file it names is really in the deck (the server knows the paths).
+    if (fields.reference !== undefined && (!REFERENCE.test(fields.reference) || !fs.existsSync(path.join(paths.dir, fields.reference)))) {
+      return json(res, 422, { error: "invalid", problems: ["$.reference: file not found"] });
+    }
     if (fields.kind === "overflow") {
       const duplicate = openRequests(paths).find((r) => r.kind === "overflow" && r.slideId === fields.slideId);
       if (duplicate) return json(res, 200, { request: duplicate, ignored: true });
@@ -363,6 +398,7 @@ export function createStudioServer({ dir, studioDir = STUDIO_DIR }) {
     }
     if (req.method === "PUT" && route === "api/plan") return putPlan(req, res);
     if (req.method === "POST" && route === "api/requests") return postRequest(req, res);
+    if (req.method === "POST" && route === "api/references") return postReference(req, res);
     const text = route.match(TEXT_ROUTE);
     if (req.method === "PUT" && text) return putText(req, res, text[1]);
     return notFound(req, res);

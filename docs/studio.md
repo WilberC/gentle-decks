@@ -52,7 +52,7 @@ each one and answers with `studio reply` or `studio resolve --reply`; see
 | `add-slide` | `slideId`, `text` | Adds a slide after that one, in the plan and the deck. |
 | `overflow` | `slideId` | Shortens or splits a slide that does not fit 1600×900. |
 | `move` | `slideId`, `selector`, `excerpt` | The user dragged an element in the slide's Edit mode; move that block in the markdown, keeping its content. |
-| `propose-style` | `mode` (`new`, `improve`, `comment`), `theme`, `text` | Writes `decks/<slug>/themes/<name>.css`: a new theme, an improvement of `theme`, or the answer to your comment about `theme`. |
+| `propose-style` | `mode` (`new`, `improve`, `comment`), `theme`, `text`, `reference` | Writes `decks/<slug>/themes/<name>.css`: a new theme, an improvement of `theme`, or the answer to your comment about `theme`. With `reference`, the agent reads that image or PDF (`references/<name>` inside the deck dir) before writing the CSS. |
 | `approve` | — | The user approved the deck: deliver the final `-o` file, resolve the request, then stop the studio (`decks studio stop <deck-dir>`); the URL stops working. |
 
 ## Themes
@@ -68,10 +68,16 @@ see [themes.md](themes.md) for where themes live and the lookup order. Themes mu
 theme for this deck; the optional instructions describe the look you want. The
 result appears as *propuesto* as soon as the agent writes the CSS.
 
+**From a reference**: **📎 con referencia** next to it opens a file picker
+(images and PDF), uploads the file to `decks/<slug>/references/` and then asks
+for the same optional instructions; the request carries `reference`, so the
+agent looks at the image (palette, typography, character) or extracts the
+palette and hierarchy from the PDF before writing the CSS.
+
 **Theme detail**: clicking a card opens the style on its own stage with the first
 slides rendered in it, the components the theme contract requires (`card`, `step`,
-`bars`, `stat`, `term`, `pills`, `figure`) as a plain legend, and three actions:
-**Elegir este estilo** sets `plan.theme`; **Comentar este estilo** and
-**Mejorar este estilo** queue a `propose-style` request for that theme, so the
-agent edits its CSS instead of a slide. **← Volver a los estilos** returns to the
-cards.
+`bars`, `stat`, `term`, `pills`, `figure`) as a plain legend, and four actions:
+**Elegir este estilo** sets `plan.theme`; **Comentar este estilo**,
+**Mejorar este estilo** and **📎 Mejorar con referencia** queue a `propose-style`
+request for that theme, so the agent edits its CSS instead of a slide.
+**← Volver a los estilos** returns to the cards.

@@ -675,6 +675,142 @@ test("POST api/requests accepts propose-style and validates its mode and theme (
   assert.ok(before.length > 0);
 });
 
+const REFERENCE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".svg", ".pdf"];
+const REFERENCE_EXT_PROBLEM = `$.name: extension must be one of ${REFERENCE_EXTENSIONS.join(", ")}`;
+const REFERENCE_PATTERN_PROBLEM = /^\$\.reference: must match /;
+
+test("POST api/references stores a whitelisted reference under the deck (S1)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const refs = path.join(dir, "references");
+
+  const png = await send(studio, "POST", "api/references", { name: "marca.png", data: PNG_1PX });
+  assert.equal(png.status, 200);
+  assert.deepEqual(png.body, { reference: "references/marca.png" });
+  assert.deepEqual(fs.readFileSync(path.join(refs, "marca.png")), Buffer.from(PNG_1PX, "base64"));
+
+  // Every whitelisted extension is accepted, and the stored extension is lower-cased.
+  for (const [name, stored] of [
+    ["brief.pdf", "brief.pdf"],
+    ["foto.JPG", "foto.jpg"],
+    ["logo.svg", "logo.svg"],
+    ["clip.avif", "clip.avif"],
+  ]) {
+    const res = await send(studio, "POST", "api/references", { name, data: PNG_1PX });
+    assert.equal(res.status, 200, name);
+    assert.deepEqual(res.body, { reference: `references/${stored}` }, name);
+  }
+
+  // Only the basename survives: no traversal, no extra directories, and the same name overwrites.
+  for (const name of ["../../etc/marca.png", "..\\..\\marca.png"]) {
+    const res = await send(studio, "POST", "api/references", { name, data: PNG_1PX });
+    assert.equal(res.status, 200, name);
+    assert.deepEqual(res.body, { reference: "references/marca.png" }, name);
+  }
+  const longName = await send(studio, "POST", "api/references", { name: `${"a".repeat(200)}.png`, data: PNG_1PX });
+  assert.equal(longName.status, 200);
+  assert.deepEqual(longName.body, { reference: `references/${"a".repeat(64)}.png` });
+  assert.deepEqual(fs.readdirSync(refs).sort(), [
+    "a".repeat(64) + ".png",
+    "brief.pdf",
+    "clip.avif",
+    "foto.jpg",
+    "logo.svg",
+    "marca.png",
+  ]);
+  assert.ok(!fs.existsSync(path.join(dir, "etc")), "no directory may be created outside references/");
+
+  // This route carries a bigger cap than the 1 MB every other route keeps (the S5 test pins that one).
+  const medium = await send(studio, "POST", "api/references", { name: "big.png", data: "A".repeat(2 * 1024 * 1024) });
+  assert.equal(medium.status, 200);
+  assert.equal(fs.statSync(path.join(refs, "big.png")).size, (2 * 1024 * 1024 * 3) / 4);
+
+  const before = fs.readdirSync(refs).sort();
+  const rejections = [
+    [{ name: "brief.txt", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: "marca.png.exe", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: ".png", data: PNG_1PX }, [REFERENCE_EXT_PROBLEM]],
+    [{ name: "marca con espacios.png", data: PNG_1PX }, ["$.name: must match ^[A-Za-z0-9][A-Za-z0-9._-]*$"]],
+    [{ name: "", data: PNG_1PX }, ["$.name: must be a non-empty filename"]],
+    [{ name: 42, data: PNG_1PX }, ["$.name: must be a non-empty filename"]],
+    [{ name: "marca.png" }, ["$.data: must be a non-empty base64 string"]],
+    [{ name: "marca.png", data: "no!!base64" }, ["$.data: must be a non-empty base64 string"]],
+  ];
+  for (const [payload, problems] of rejections) {
+    const res = await send(studio, "POST", "api/references", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.deepEqual(res.body, { error: "invalid", problems }, JSON.stringify(payload));
+    assert.deepEqual(fs.readdirSync(refs).sort(), before, "a rejection must write nothing");
+  }
+
+  const oversized = await send(studio, "POST", "api/references", {
+    name: "huge.png",
+    data: "A".repeat(13 * 1024 * 1024),
+  });
+  assert.equal(oversized.status, 413);
+  assert.deepEqual(oversized.body, { error: "too-large" });
+  assert.deepEqual(fs.readdirSync(refs).sort(), before, "an oversized upload must write nothing");
+});
+
+test("POST api/requests carries a propose-style reference that exists on disk (S1)", async (t) => {
+  const dir = makeDeck({ deck: scaffoldDeck(PLAN), themes: { studio: DECK_THEME } });
+  const studio = await startStudio(dir);
+  t.after(() => stopStudio(studio));
+  const file = path.join(dir, "requests.json");
+
+  const uploaded = await send(studio, "POST", "api/references", { name: "marca.png", data: PNG_1PX });
+  const reference = uploaded.body.reference;
+
+  const fresh = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new", reference, text: "Imitá esta marca" });
+  assert.equal(fresh.status, 200);
+  assert.deepEqual(
+    {
+      kind: fresh.body.request.kind,
+      mode: fresh.body.request.mode,
+      reference: fresh.body.request.reference,
+      text: fresh.body.request.text,
+      status: fresh.body.request.status,
+    },
+    { kind: "propose-style", mode: "new", reference: "references/marca.png", text: "Imitá esta marca", status: "open" },
+  );
+  await waitFor(
+    () => studio.stdout().includes(`request ${fresh.body.request.id} propose-style -\n`),
+    4000,
+    "propose-style reference stdout line",
+  );
+
+  const improve = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "improve", theme: "studio", reference });
+  assert.equal(improve.status, 200);
+  assert.equal(improve.body.request.theme, "studio");
+  assert.equal(improve.body.request.reference, "references/marca.png");
+
+  // A reference is optional: requests without one keep working and never gain the field.
+  const plain = await send(studio, "POST", "api/requests", { kind: "propose-style", mode: "new" });
+  assert.equal(plain.status, 200);
+  assert.equal("reference" in plain.body.request, false);
+
+  const before = fs.readFileSync(file);
+  const invalid = [
+    [{ kind: "propose-style", mode: "new", reference: "references/ghost.png" }, ["$.reference: file not found"]],
+    [{ kind: "propose-style", mode: "new", reference: "marca.png" }, REFERENCE_PATTERN_PROBLEM],
+    [{ kind: "propose-style", mode: "new", reference: "references/../plan.json" }, REFERENCE_PATTERN_PROBLEM],
+    [{ kind: "propose-style", mode: "new", reference: 5 }, REFERENCE_PATTERN_PROBLEM],
+  ];
+  for (const [payload, problems] of invalid) {
+    const res = await send(studio, "POST", "api/requests", payload);
+    assert.equal(res.status, 422, JSON.stringify(payload));
+    assert.equal(res.body.error, "invalid");
+    if (Array.isArray(problems)) {
+      assert.deepEqual(res.body.problems, problems, JSON.stringify(payload));
+    } else {
+      assert.equal(res.body.problems.length, 1, JSON.stringify(payload));
+      assert.match(res.body.problems[0], problems, JSON.stringify(payload));
+    }
+    assert.deepEqual(fs.readFileSync(file), before, "a rejection must write nothing");
+  }
+});
+
 test("studio requests and resolve CLI read and update requests.json (S9)", async (t) => {
   const dir = makeDeck({ deck: scaffoldDeck(PLAN) });
   const studio = await startStudio(dir);

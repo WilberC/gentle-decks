@@ -201,14 +201,18 @@ function renderStyle(stage) {
   const propose = el("button", { type: "button", className: "btn propose", id: "propose-style", textContent: "✦ Proponer estilo" });
   propose.title = "Pedir al agente un estilo nuevo para este deck";
   propose.addEventListener("click", onProposeStyle);
+  // S1: the same request, but from an image or PDF the agent reads before writing the CSS.
+  const attach = el("button", { type: "button", className: "btn attach", id: "propose-reference", textContent: "📎 con referencia" });
+  attach.title = "Adjuntar una imagen o un PDF: el agente lo mira y propone el estilo a partir de él";
+  attach.addEventListener("click", onProposeStyleFromReference);
   const look = el(
     "section",
     { className: "look" },
-    el("div", { className: "look-head" }, el("h2", { textContent: "Elige el estilo" }), propose),
+    el("div", { className: "look-head" }, el("h2", { textContent: "Elige el estilo" }), el("div", { className: "look-acts" }, attach, propose)),
     el("p", {
       className: "muted",
       textContent:
-        "Clic en un estilo para verlo en grande, comentarlo o mejorarlo; “✦ Proponer estilo” pide uno nuevo al agente.",
+        "Clic en un estilo para verlo en grande, comentarlo o mejorarlo; “✦ Proponer estilo” pide uno nuevo al agente y “📎 con referencia” parte de una imagen o un PDF.",
     }),
     themeCards(),
   );
@@ -239,6 +243,85 @@ async function onProposeStyle() {
   await postRequest(
     { kind: "propose-style", mode: "new", ...(extra ? { text: extra } : {}) },
     "Pedí al agente que proponga un estilo nuevo.",
+  );
+}
+
+// ---------- referencia de estilo (S1, S2) ----------
+
+// Only files the agent can look at (images) or read (PDF); the server keeps its own whitelist.
+const REFERENCE_ACCEPT = "image/*,.pdf";
+
+let refInput = null;
+let refPick = null;
+
+// The hidden picker is created once and reused; `change`/`cancel` resolve whatever click() waits on.
+function pickReferenceFile() {
+  if (!refInput) {
+    const settle = (file) => {
+      const resolve = refPick;
+      refPick = null;
+      resolve?.(file);
+    };
+    refInput = el("input", { type: "file", accept: REFERENCE_ACCEPT, id: "reference-file", hidden: true });
+    refInput.addEventListener("change", () => {
+      const file = refInput.files?.[0] ?? null;
+      refInput.value = "";
+      settle(file);
+    });
+    // Dismissing the picker resolves with null, so the action never stays waiting for a file.
+    refInput.addEventListener("cancel", () => settle(null));
+    document.body.append(refInput);
+  }
+  return new Promise((resolve) => {
+    refPick = resolve;
+    refInput.click();
+  });
+}
+
+const readBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+// Uploads the picked file and returns its deck-relative path, or null when the user cancelled or the
+// upload failed (a failure is reported through the usual notice).
+async function uploadReference() {
+  const file = await pickReferenceFile();
+  if (!file) return null;
+  let data;
+  try {
+    data = await readBase64(file);
+  } catch {
+    notify(`No se pudo leer ${file.name}.`, "error");
+    return null;
+  }
+  const r = await api("POST", "api/references", { name: file.name, data });
+  if (r.ok) return r.data.reference;
+  const why = r.status === 413 ? "es demasiado grande (máximo ~9 MB)" : (r.data?.error ?? r.status);
+  const detail = r.data?.message ?? (r.data?.problems ?? []).join("; ");
+  notify(`No se pudo subir ${file.name}: ${why}${detail ? ` — ${detail}` : ""}`, "error");
+  return null;
+}
+
+const referenceName = (reference) => String(reference).split("/").pop();
+
+// S1: upload first, then the same optional instructions, and the reference travels with the request.
+async function onProposeStyleFromReference() {
+  const reference = await uploadReference();
+  if (!reference) return;
+  const extra = await ask({
+    title: "Proponer un estilo desde una referencia",
+    hint: `El agente mirará ${referenceName(reference)} (paleta, tipografía y carácter) y propondrá un estilo nuevo para este deck. Podés describir el look que buscás (opcional).`,
+    ok: "Pedir estilo",
+    required: false,
+  });
+  if (extra === null) return;
+  await postRequest(
+    { kind: "propose-style", mode: "new", reference, ...(extra ? { text: extra } : {}) },
+    "Pedí al agente que proponga un estilo a partir de la referencia.",
   );
 }
 
@@ -279,6 +362,10 @@ function renderThemeDetail(stage, theme) {
   comment.addEventListener("click", () => onThemeComment(theme));
   const improve = el("button", { type: "button", className: "btn", id: "theme-improve", textContent: "Mejorar este estilo" });
   improve.addEventListener("click", () => onThemeImprove(theme));
+  // S2: the same improvement, aimed at an image or PDF the agent reads before editing the CSS.
+  const improveRef = el("button", { type: "button", className: "btn", id: "theme-improve-reference", textContent: "📎 Mejorar con referencia" });
+  improveRef.title = "Adjuntar una imagen o un PDF y acercar este estilo a lo que muestra";
+  improveRef.addEventListener("click", () => onThemeImproveFromReference(theme));
 
   stage.append(
     el(
@@ -288,10 +375,11 @@ function renderThemeDetail(stage, theme) {
       preview,
       el("h3", { textContent: "Componentes que viste el estilo" }),
       components,
-      el("div", { className: "acts" }, choose, comment, improve),
+      el("div", { className: "acts" }, choose, comment, improve, improveRef),
       el("p", {
         className: "muted note",
-        textContent: "Comentar y mejorar piden al agente que edite el CSS de este estilo; el estilo elegido se sigue aplicando a todo el deck.",
+        textContent:
+          "Comentar y mejorar piden al agente que edite el CSS de este estilo; con una referencia adjunta además la lee antes de escribir. El estilo elegido se sigue aplicando a todo el deck.",
       }),
     ),
   );
@@ -321,6 +409,23 @@ async function onThemeImprove(theme) {
   await postRequest(
     { kind: "propose-style", mode: "improve", theme: theme.name, ...(extra ? { text: extra } : {}) },
     `Pedí al agente que mejore el estilo ${theme.name}.`,
+  );
+}
+
+// S2: improve the theme towards a reference the agent reads before it edits the CSS.
+async function onThemeImproveFromReference(theme) {
+  const reference = await uploadReference();
+  if (!reference) return;
+  const extra = await ask({
+    title: `Mejorar ${theme.name} con una referencia`,
+    hint: `El agente mirará ${referenceName(reference)} (paleta, tipografía y jerarquía) y ajustará el CSS de ${theme.name} para acercarlo a esa referencia. Podés agregar instrucciones (opcional).`,
+    ok: "Pedir mejora",
+    required: false,
+  });
+  if (extra === null) return;
+  await postRequest(
+    { kind: "propose-style", mode: "improve", theme: theme.name, reference, ...(extra ? { text: extra } : {}) },
+    `Pedí al agente que mejore el estilo ${theme.name} con una referencia.`,
   );
 }
 
