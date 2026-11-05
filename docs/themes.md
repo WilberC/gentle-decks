@@ -71,6 +71,25 @@ after you confirm the destination. Every theme must follow
 [themes/CONTRACT.md](../themes/CONTRACT.md); `decks theme check` tells you
 which selectors are missing.
 
+## Workshop: design a theme on the canvas
+
+New styles do not have to start as CSS. When the studio's agent offers the
+gentle-design canvas (the `gentle_design` tool), a theme proposal becomes a
+visual workshop:
+
+1. The agent drafts 2–3 theme directions as CSS and renders real sample
+   slides with each one: `decks <deck.md> --design design/<slug> --theme
+   decks/<slug>/themes/draft-<name>.css` (drafts do not need to pass
+   `theme check` yet).
+2. The directions open on the canvas; you comment on the actual slides and
+   the agent applies the changes to the draft CSS.
+3. The approved direction is renamed, passes `theme check`, and appears in
+   the studio's Estilo view — where **Mis estilos** can save it as yours.
+
+Every gentle:design improvement (better directions, a sharper design system,
+more precise comments) therefore lifts deck styling: the theme you get is the
+template of something you saw and approved, not text you imagined.
+
 Do not edit the built-in `themes/` directory of the installed package: the
 next `pi update` or reinstall replaces it. Copy the theme into your personal
 directory under a new name, or the same name to override it.

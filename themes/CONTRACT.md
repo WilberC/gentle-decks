@@ -24,6 +24,23 @@ below; a theme missing one fails the check.
   `.brand` or `.counter`, and nothing should sit so close to them that editing
   it would collide with the footer.
 
+## Quality floor and craft ceiling
+
+`decks theme check` enforces the selector list below: that is the **floor**.
+The **ceiling** is the craft bar shared with the gentle:design skill, and it
+is expected to rise as that skill improves. When drafting or reviewing a
+theme, hold it to at least:
+
+- Fluid type scale (`clamp()`) with a clear hierarchy: kicker, title, lead,
+  body, caption — each step visibly distinct.
+- One accent family plus a small set of supporting hues; color never replaces
+  hierarchy.
+- Consistent spacing rhythm (the `.slide` gap, container gaps) and a visible
+  footer safe area.
+- AA contrast for every text/background pair, including color tokens on cards.
+- Motion is decorative only, brief, and disabled under
+  `prefers-reduced-motion`.
+
 ## Required selectors
 
 | Group | Selectors |

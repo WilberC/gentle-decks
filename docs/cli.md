@@ -10,6 +10,7 @@ studio. From a checkout, run it as `node bin/decks.js`; from an npm install, as
 | --- | --- |
 | `decks <deck.md> -o <deck.html>` | Render the navigable presentation (one self-contained HTML file) |
 | `decks <deck.md> --design <dir>` | Write one 1600×900 artboard per slide for the gentle-design canvas |
+| `decks <deck.md> (-o \| --design) --theme <name\|.css>` | Render with a theme override: a theme name (deck → user → bundled lookup) or a `.css` path loaded as-is, so draft themes can be iterated before passing `theme check` |
 | `decks plan check <plan.json>` | Validate an outline; prints `ok: N slides` |
 | `decks plan scaffold <plan.json> -o <deck.md>` | Create a draft deck from the outline |
 | `decks theme check <name-or-file.css>` | Check a theme against the theme contract; a name is looked up in the user themes directory, then the bundled `themes/` |
@@ -23,6 +24,7 @@ studio. From a checkout, run it as `node bin/decks.js`; from an npm install, as
 ```bash
 node bin/decks.js decks/sample/gentle-decks.md -o decks/sample/gentle-decks.html
 node bin/decks.js decks/sample/gentle-decks.md --design design/gentle-decks
+node bin/decks.js decks/sample/gentle-decks.md --design design/preview --theme decks/demo/themes/draft-warm.css
 node bin/decks.js plan check decks/demo/plan.json
 node bin/decks.js plan scaffold decks/demo/plan.json -o decks/demo/demo.md
 node bin/decks.js theme check gentleman-cute

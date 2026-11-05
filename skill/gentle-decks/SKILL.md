@@ -66,14 +66,35 @@ Read its `FORMAT.md` before writing the first slide of a session.
    (`card`, `steps`, `bars`, …). Run `plan check` until it prints `ok`.
 3. **Look and feel.** Offer the bundled themes (`fair-test` for bright,
    classroom-friendly decks; `fair-test-gentle` and `gentleman-cute` for Gentle
-   decks) and, when none fits, propose one or two more for this topic and audience: write each as `decks/<slug>/themes/<name>.css`
-   following `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
-   until it prints `ok`. Keep the existing themes as options; the studio also
-   lists the user's own themes from the user themes directory, and its
-   **Mis estilos** view saves a proposed theme as the user's (**Guardar como mío**)
-   or deletes one of the user's own copies. When the user wants to reuse a
-   proposed theme in other decks outside the studio, copy it into the user themes
-   directory (create it if needed) only after they confirm the destination.
+   decks) and, when none fits, propose one or two more for this topic and
+   audience. Keep the existing themes as options; the studio also lists the
+   user's own themes from the user themes directory, and its **Mis estilos**
+   view saves a proposed theme as the user's (**Guardar como mío**) or deletes
+   one of the user's own copies.
+
+   Two ways to propose, chosen by capability:
+
+   - **Visual workshop (default when the `gentle_design` tool is available in
+     this session).** For each direction: draft the theme as CSS in
+     `decks/<slug>/themes/draft-<name>.css` (it does not need to pass the full
+     contract yet), render real sample slides with it —
+     `decks <deck.md> --design design/<slug> --theme decks/<slug>/themes/draft-<name>.css`
+     — open the directions on the gentle-design canvas, and let the user
+     comment on the actual slides. Apply the comments to the draft CSS and
+     re-render until the user picks one; then rename the draft to its final
+     name, run `theme check decks/<slug>/themes/<name>.css` until it prints
+     `ok`, and offer **Guardar como mío** in the studio. Apply the current
+     gentle:design quality bar while drafting: the craft ceiling of
+     `themes/CONTRACT.md` mirrors it, and gentle:design improvements are
+     expected to raise that bar over time.
+   - **Direct CSS (without the tool, or when the user declines the canvas):**
+     write each as `decks/<slug>/themes/<name>.css` following
+     `themes/CONTRACT.md`, and run `theme check decks/<slug>/themes/<name>.css`
+     until it prints `ok`.
+
+   When the user wants to reuse a proposed theme in other decks outside the
+   studio, copy it into the user themes directory (create it if needed) only
+   after they confirm the destination.
 4. **Open the studio.** Start it in the background and watch its output:
    `node <decks-repo>/bin/decks.js studio decks/<slug>` prints
    `studio: http://127.0.0.1:<port>/<token>/`, then one `request <id> <kind> <slide>`
