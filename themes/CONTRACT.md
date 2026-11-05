@@ -41,6 +41,60 @@ theme, hold it to at least:
 - Motion is decorative only, brief, and disabled under
   `prefers-reduced-motion`.
 
+### Typography
+
+Type carries the first pass of hierarchy, so the scale is measured, not felt.
+Check the ratios at 1600×900, the widest render.
+
+- Step ratios against body text: `h1` ≥ 3×, `h2` ≥ 1.8×, `h3` ≥ 1.25×. `h3`
+  is never smaller than body text; an `h3` that matches `p` reads as a bold
+  paragraph, which is the most common way a deck loses its outline.
+- Weight ladder: headings at 700 or above, prose at 400, and at least 200
+  between a heading and the prose under it. Neighboring levels that differ by
+  only 100 weight read as the same level.
+- `.lead` keeps a size step over body (≥ 1.2×) and a weight step (≥ 500). A
+  muted lead is allowed only with that weight step, because a dimmer lead at
+  body weight reads as de-emphasis rather than hierarchy.
+- Family variety: at least two families with distinct jobs — a display/body
+  family plus a mono (or serif) role that carries real content, such as
+  kickers, measurements, captions, terminal lines, and table keys. A mono that
+  appears once does not count, and the themes must differ from each other by
+  scale, weight ladder, tracking, or leading rather than by palette alone.
+- In the phone breakpoint the ratios may compress with the screen, but the
+  order holds: `h3` and `.lead` stay above body text.
+
+#### Emphasis pattern
+
+Decks mark key words with `**strong**` and `_emphasis_` (see
+[FORMAT.md](../FORMAT.md)), so a theme styles both instead of inheriting the
+browser default:
+
+- `strong` / `b` raise the weight by at least one step (≥ 700) and take
+  `--ink`, the theme's highest-contrast text color. Emphasis is weight plus
+  color, never color alone.
+- `em` adds italic and the same `--ink` lift. Inside `h1`–`h3`, `em` may use
+  the accent instead, because display sizes clear AA large-text contrast (3:1)
+  even where the accent would fail at body size.
+- Both marks keep AA contrast against their own background. A phrase in a
+  specific accent color stays the job of the inline tokens (`.pink`, `.gold`,
+  `.mint`, …).
+- Components that already set a color on `b` for their own reason (`.step b`,
+  `.brand b`) keep it; the pattern is for prose.
+
+#### Tracking and leading floors
+
+- Prose and lists: `line-height` ≥ 1.45, `letter-spacing` 0.
+- Secondary and small roles (cards, table cells, captions, unit labels,
+  `.step small`) set an explicit `line-height` ≥ 1.35. Never leave them at the
+  browser's `normal`, whose value drifts with the font metrics and turns into
+  uneven rhythm as soon as roles mix on a slide.
+- Headings: `h1`/`h2` at 3rem and above use `line-height` ≤ 1.15 with tracking
+  of `-.015em` or tighter; smaller headings keep `line-height` ≥ 1.15 and
+  tracking within ±.02em, so the change in tightness does not read as a change
+  of font.
+- Uppercase labels (`.kicker`) need tracking ≥ .08em; prose and headings never
+  take positive tracking, and no text renders below 0.8rem.
+
 ## Required selectors
 
 | Group | Selectors |

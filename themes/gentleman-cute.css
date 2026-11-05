@@ -6,8 +6,9 @@
     --border: #563040;
     --border-subtle: #2A1720;
     --text: #F6EFF3;
+    --ink: var(--text);
     --muted: #A78E9B;
-    --dim: #76616B;
+    --dim: #927A89;
     --accent: #F095C8;
     --deep-pink: #C96AA2;
     --active-pink: #FFB1DD;
@@ -49,13 +50,18 @@
   .slide > * { flex-shrink: 0; }
 
   /* typography */
-  .kicker { font-family: var(--mono); font-size: 1.05rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.4vh; }
+  .kicker { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.4vh; }
   .kicker::before { content: "✿ "; color: var(--soft-rose); }
-  h1 { font-size: clamp(2.6rem, 6vw, 5.6rem); line-height: 1.02; font-weight: 800; letter-spacing: -.03em; }
-  h2 { font-size: clamp(2rem, 3.6vw, 3.4rem); line-height: 1.08; font-weight: 750; letter-spacing: -.02em; margin-bottom: 3.5vh; }
-  h3 { font-size: 1.35rem; color: var(--champagne); margin-bottom: .6rem; font-weight: 700; }
-  p, li { font-size: clamp(1.05rem, 1.45vw, 1.45rem); line-height: 1.5; color: var(--pearl); }
-  .lead { font-size: clamp(1.25rem, 1.9vw, 1.8rem); color: var(--muted); max-width: 62ch; margin-top: 2.4vh; }
+  h1 { font-size: clamp(2.7rem, 5.9vw, 5.35rem); line-height: 1.04; font-weight: 800; letter-spacing: -.03em; }
+  h2 { font-size: clamp(1.95rem, 3.5vw, 3.05rem); line-height: 1.1; font-weight: 700; letter-spacing: -.018em; margin-bottom: 3.5vh; }
+  h3 { font-size: 1.75rem; line-height: 1.25; color: var(--champagne); margin-bottom: .6rem; font-weight: 700; letter-spacing: 0; }
+  p, li { font-size: clamp(1.05rem, 1.4vw, 1.35rem); line-height: 1.5; color: var(--pearl); }
+  .lead { font-size: clamp(1.3rem, 1.9vw, 1.75rem); line-height: 1.5; font-weight: 500; color: var(--muted); max-width: 62ch; margin-top: 2.4vh; }
+  /* emphasis: `**strong**` and `_em_` lift to full ink; headings keep the accent */
+  strong, b { font-weight: 800; color: var(--ink); }
+  em { font-style: italic; color: var(--ink); }
+  h1 em, h2 em, h3 em { font-style: normal; color: var(--accent); }
+  strong em, em strong { font-weight: 800; font-style: italic; }
   .pink { color: var(--accent); } .gold { color: var(--champagne); } .mint { color: var(--mint); }
   .blue { color: var(--powder-blue); } .rose { color: var(--soft-rose); } .peach { color: var(--peach); }
   .red { color: var(--error); }
@@ -86,7 +92,7 @@
 
   /* big numbers */
   .stat { font-family: var(--mono); font-weight: 800; font-size: clamp(2.4rem, 4.6vw, 4.4rem); line-height: 1; display: block; margin-bottom: .6rem; }
-  .stat small { font-size: .4em; color: var(--muted); font-weight: 600; margin-left: .2em; }
+  .stat small { font-size: .4em; line-height: 1.35; color: var(--muted); font-weight: 600; margin-left: .2em; }
 
   /* bars */
   .bars { display: grid; gap: 2.2vh; margin-top: 1vh; }
@@ -109,19 +115,19 @@
   /* figure: an embedded image with its caption */
   .figure { margin: 0; display: grid; gap: .8vh; }
   .figure img { width: 100%; max-height: 52vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--border-subtle); }
-  .figure figcaption { font-family: var(--mono); font-size: .85rem; color: var(--dim); }
+  .figure figcaption { font-family: var(--mono); font-size: .85rem; line-height: 1.4; color: var(--dim); }
 
   /* steps */
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2vw; margin-top: 2vh; }
   .step { background: var(--panel); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 2.4vh 1.2vw; }
   .step b { display: block; font-family: var(--mono); color: var(--accent); font-size: 1.5rem; }
   .step span { display: block; color: var(--champagne); font-weight: 700; margin: .5rem 0 .6rem; font-size: 1.15rem; }
-  .step small { color: var(--pearl); font-size: clamp(.9rem, 1.1vw, 1.08rem); line-height: 1.45; display: block; }
+  .step small { color: var(--pearl); font-size: clamp(.9rem, 1.1vw, 1.08rem); line-height: 1.5; display: block; }
   .step.hl { border-color: var(--accent); background: linear-gradient(180deg, rgba(240,149,200,.14), var(--panel)); }
   .step.bad { border-color: #6a2b3a; }
 
   /* table */
-  table { width: 100%; border-collapse: collapse; font-size: clamp(.95rem, 1.25vw, 1.2rem); }
+  table { width: 100%; border-collapse: collapse; font-size: clamp(.95rem, 1.25vw, 1.2rem); line-height: 1.4; }
   th { text-align: left; color: var(--champagne); font-weight: 700; padding: 1.2vh .8vw; border-bottom: 1px solid var(--border); }
   td { padding: 1.1vh .8vw; border-bottom: 1px solid var(--border-subtle); color: var(--pearl); vertical-align: top; }
   td:first-child { font-family: var(--mono); color: var(--accent); white-space: nowrap; }
@@ -175,11 +181,11 @@
     }
 
     .kicker { font-size: .8rem; letter-spacing: .12em; margin-bottom: .8rem; }
-    h1 { font-size: clamp(2rem, 9vw, 3.2rem); }
-    h2 { font-size: clamp(1.55rem, 6.6vw, 2.3rem); margin-bottom: 1.2rem; }
-    h3 { font-size: 1.15rem; }
+    h1 { font-size: clamp(2.2rem, 9vw, 3.1rem); line-height: 1.06; letter-spacing: -.025em; }
+    h2 { font-size: clamp(1.6rem, 6.4vw, 2.2rem); line-height: 1.15; margin-bottom: 1.2rem; }
+    h3 { font-size: 1.35rem; line-height: 1.25; }
     p, li { font-size: 1rem; }
-    .lead { font-size: 1.12rem; margin-top: 1.2rem; }
+    .lead { font-size: 1.25rem; line-height: 1.45; margin-top: 1.2rem; }
     .card p, .card li { font-size: .98rem; }
     .quote { font-size: 1.08rem !important; padding: .85rem 1rem; margin-top: 1.4rem; }
     ul.clean { gap: .7rem; }
