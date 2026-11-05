@@ -27,7 +27,7 @@ To try unreleased changes from `main`, install from Git instead:
 `pi install git:github.com/WilberC/gentle-decks`.
 
 Restart the session (or `/reload`) and ask: *"Make a presentation about …"*.
-Requires Node.js 18 or later.
+Requires Node.js 18 or later. `decks pdf` needs Chrome (`BROWSER`/`CHROME_PATH`) and Node 22+; the CLI warns once when a newer gentle-decks is published.
 
 ## What you get
 
@@ -36,6 +36,8 @@ Requires Node.js 18 or later.
 | **Guided flow** | The agent asks about audience, goal and length, proposes an outline, then writes slide by slide. Every content slide carries a visual element: figures with embedded images, charts, terminal blocks, structured layouts. |
 | **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. Comments go one by one or in batches; a banner shows the writing queue; approving hands delivery to the agent and shuts the studio down. |
 | **One file out** | Theme CSS, navigation and every image are inlined (self-contained HTML, so PDF export never loses images), with slides in the established outline order. Arrows or swipe to navigate, `F` fullscreen, `P` to export to PDF from the browser, `decks pdf` to print the static PDF straight from the CLI, plus an Export download from the studio. |
+| **Motion** | Per-slide entrance animations (`animate: fade-up`, with automatic stagger) and container-level choreography, plus deck-wide `transition: fade\|slide\|none`. Reduced-motion disables everything and print always shows the final state. |
+| **Design canvas link** | The studio's Estilo view offers **Ver en gentle design ↗** when the agent opens the design canvas, so you review directions without leaving the decks experience — deck, view and comment drafts stay intact. |
 | **Small diffs** | The same markdown always renders byte-identical HTML, so a fix is an edit to one slide. |
 | **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic — from the chat, from a reference image or PDF, or designed as visual directions on the gentle-design canvas before it becomes CSS. Manage your own in the studio's **Mis estilos** view ([where themes live](docs/themes.md)). |
 
