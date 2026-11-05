@@ -116,7 +116,10 @@ Read its `FORMAT.md` before writing the first slide of a session.
 6. **Refine.** Handle every open request (below) as it arrives, then resolve it.
 7. **Deliver.** `node <decks-repo>/bin/decks.js decks/<slug>/<slug>.md -o decks/<slug>/<slug>.html`
    produces the single navigable file (arrows/swipe, `F` fullscreen, `P` PDF export;
-   images embedded as data URIs, slides in the established plan order).
+   images embedded as data URIs, slides in the established plan order). For the
+   static PDF deliverable use `node <decks-repo>/bin/decks.js pdf
+   decks/<slug>/<slug>.md` (headless Chrome, no print dialog; needs Chrome via
+   `BROWSER`/`CHROME_PATH` and Node 22+).
    The studio's **Present** link shows the same file live. When the user posts an
    `approve` request (the **✓ Aprobar y cerrar** button), deliver the final file, resolve
    the request, and stop the studio: `node <decks-repo>/bin/decks.js studio stop decks/<slug>`.
