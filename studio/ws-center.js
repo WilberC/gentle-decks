@@ -5,6 +5,7 @@ import {
   ask,
   centerEls,
   el,
+  isCanvasUrl,
   loadState,
   notify,
   postRequest,
@@ -217,12 +218,13 @@ function renderStyle(stage) {
   const look = el(
     "section",
     { className: "look" },
-    el("div", { className: "look-head" }, el("h2", { textContent: "Elige el estilo" }), el("div", { className: "look-acts" }, attach, propose)),
+    el("div", { className: "look-head" }, el("h2", { textContent: "Elige el estilo" }), el("div", { className: "look-acts" }, attach, propose, canvasAction())),
     el("p", {
       className: "muted",
       textContent:
         "Clic en un estilo para verlo en grande, comentarlo o mejorarlo; “✦ Proponer estilo” pide uno nuevo al agente y “📎 con referencia” parte de una imagen o un PDF.",
     }),
+    designNote(),
     themeCards(),
   );
   const n = plan.slides.length;
@@ -332,6 +334,121 @@ async function onProposeStyleFromReference() {
     { kind: "propose-style", mode: "new", reference, ...(extra ? { text: extra } : {}) },
     "Pedí al agente que proponga un estilo a partir de la referencia.",
   );
+}
+
+// ---------- canvas de gentle design (S1, design-view-integration) ----------
+
+// The canvas is another loopback app the agent opens, and its own CSP (frame-ancestors 'none') forbids
+// framing it, so the studio can never embed it. Instead the studio keeps the decks context and offers
+// a labelled action that opens the canvas in its own tab, stating in place how to come back: this tab
+// keeps the deck, the view and the comment drafts exactly as they were.
+const CANVAS_READY =
+  "Se abre en otra pestaña; volvés a decks cerrándola, con el deck, la vista y tus borradores intactos.";
+const canvasDown = (host) => `El canvas de gentle design no responde en ${host}. Pedile al agente que lo abra o pegá su URL.`;
+const CANVAS_NONE =
+  "¿Diseñás el estilo en el canvas de gentle design? Pegá la URL que te dio el agente y queda a un clic desde acá.";
+const CANVAS_CHECKING = "Comprobando el canvas de gentle design…";
+const canvasHost = (url) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
+// The stored link comes from api/state; whether it answers comes from GET api/canvas (syncCanvas).
+// `checked` distinguishes "not probed yet" from "probed and down", so the studio never claims a
+// canvas is down while it is still asking.
+function canvasState() {
+  const url = app.state?.canvas?.url ?? null;
+  const live = app.canvasLive;
+  const checked = Boolean(url) && live?.url === url;
+  return { url, checked, running: checked && live.running === true };
+}
+
+function canvasAction() {
+  const { url, checked, running } = canvasState();
+  const wrap = el("span", { className: "design-acts" });
+  if (url && running) {
+    const open = el("a", { className: "btn design-open", id: "design-open", href: url, target: "_blank", rel: "noopener" });
+    open.textContent = "Ver en gentle design ↗";
+    open.title = CANVAS_READY;
+    const change = el("button", { type: "button", className: "linkish", id: "design-change", textContent: "cambiar URL" });
+    change.title = "Guardar otra URL del canvas";
+    change.addEventListener("click", () => onSetCanvas(url));
+    wrap.append(open, change);
+    return wrap;
+  }
+  const open = el("button", { type: "button", className: "btn design-open", id: "design-open", textContent: "Ver en gentle design" });
+  open.title = !url ? CANVAS_NONE : !checked ? CANVAS_CHECKING : canvasDown(canvasHost(url));
+  open.addEventListener("click", () => onSetCanvas(url));
+  wrap.append(open);
+  if (url) {
+    const check = el("button", { type: "button", className: "linkish", id: "design-check", textContent: "comprobar" });
+    check.title = "Volver a preguntar si el canvas responde";
+    check.addEventListener("click", () => syncCanvas({ force: true }));
+    wrap.append(check);
+  }
+  return wrap;
+}
+
+function designNote() {
+  const { url, checked, running } = canvasState();
+  const text = running
+    ? CANVAS_READY
+    : !url
+      ? CANVAS_NONE
+      : !checked
+        ? CANVAS_CHECKING
+        : canvasDown(canvasHost(url));
+  return el("p", { className: "muted design-note", id: "design-note", textContent: text });
+}
+
+// S1: the saved URL is probed once per load (and on demand), so a dead link is never offered as one.
+export async function syncCanvas({ force = false } = {}) {
+  const url = app.state?.canvas?.url ?? null;
+  if (!url) {
+    if (!app.canvasLive) return;
+    app.canvasLive = null;
+    if (app.view === "style") renderCenter(centerEls());
+    return;
+  }
+  if (!force && app.canvasLive?.url === url) return;
+  const r = await api("GET", "api/canvas");
+  const next = r.ok && r.data?.url ? { url: r.data.url, running: r.data.running === true } : null;
+  const changed = JSON.stringify(next) !== JSON.stringify(app.canvasLive);
+  app.canvasLive = next;
+  if (changed && app.view === "style") renderCenter(centerEls());
+}
+
+// S1: the agent prints the canvas URL when it opens the design; pasting it once keeps the canvas one
+// click away from the studio instead of sending the user out of decks.
+async function onSetCanvas(current) {
+  const value = await ask({
+    title: "Ver en gentle design",
+    hint: "Pegá la URL del canvas que abrió el agente (empieza con http://127.0.0.1:…). Se abre en otra pestaña; volvés a decks cerrándola, con tu deck, tu vista y tus borradores intactos.",
+    ok: "Guardar URL",
+    value: current ?? "",
+  });
+  if (!value) return;
+  if (!isCanvasUrl(value)) {
+    notify("Esa URL no es el canvas: tiene que ser http://127.0.0.1:<puerto>/<token>/ (o localhost).", "error");
+    return;
+  }
+  const r = await api("PUT", "api/canvas", { url: value });
+  if (!r.ok) {
+    const detail = (r.data?.problems ?? []).join("; ") || r.data?.error || r.status;
+    notify(`No se pudo guardar la URL del canvas: ${detail}`, "error");
+    return;
+  }
+  // The save answers its own probe, so the link shows without a second round trip.
+  if (r.data?.url) app.canvasLive = { url: r.data.url, running: r.data.running === true };
+  notify(
+    r.data?.running
+      ? "Canvas listo: “Ver en gentle design ↗” abre su pestaña."
+      : "Guardé la URL, pero el canvas no responde todavía: pedile al agente que lo abra.",
+  );
+  await refresh();
 }
 
 // S11: a theme gets a detail stage: big preview, the component contract, and its own actions.
