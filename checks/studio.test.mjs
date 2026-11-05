@@ -1207,7 +1207,7 @@ test("studio commands without arguments print usage and exit 2 (S14)", () => {
     const r = run(...args);
     assert.equal(r.code, 2, args.join(" "));
     assert.equal(r.stdout, "");
-    assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\)\n/);
+    assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\) \[--theme <name|\.css>\]\n/);
     assert.match(r.stderr, /decks studio <deck-dir> \[--port N\]/);
     assert.match(r.stderr, /decks studio reply <deck-dir> <id> <text>/);
     assert.match(r.stderr, /decks studio resolve <deck-dir> <id\.\.\.> \[--reply <text>\]/);

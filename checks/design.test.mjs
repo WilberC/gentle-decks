@@ -169,6 +169,28 @@ for (const [name, deck, message] of [
   }
 }
 
+test("--theme overrides the deck theme by name or css path, drafts allowed (S3)", () => {
+  const dir = tmp();
+  const out = path.join(dir, "d");
+  // DECK declares gentleman-cute; the flag wins.
+  const r = run(writeDeck(dir), "--theme", "fair-test", "--design", out);
+  assert.equal(r.code, 0, r.stderr);
+  const html = fs.readFileSync(path.join(out, "slides", "slide-1.html"), "utf8");
+  assert.match(html, /SF Pro Rounded/);
+
+  // A draft css path loads as-is: the workshop iterates before the theme passes theme check.
+  const draft = path.join(dir, "draft.css");
+  fs.writeFileSync(draft, "/* draft */\n.deck {}\n");
+  const out2 = path.join(dir, "d2");
+  const r2 = run(writeDeck(tmp()), "--theme", draft, "--design", out2);
+  assert.equal(r2.code, 0, r2.stderr);
+  assert.match(fs.readFileSync(path.join(out2, "slides", "slide-1.html"), "utf8"), /\/\* draft \*\//);
+
+  const bad = run(writeDeck(tmp()), "--theme", "no-such-theme", "-o", path.join(dir, "x.html"));
+  assert.equal(bad.code, 1);
+  assert.match(bad.stderr, /theme not found/);
+});
+
 test("-o still writes the single navigable deck unchanged", () => {
   const dir = tmp();
   const out = path.join(dir, "deck.html");
@@ -195,7 +217,7 @@ test("missing output target prints usage and exits 2", () => {
   assert.equal(r.stdout, "");
   assert.equal(
     r.stderr,
-    "usage: decks <deck.md> (-o <out.html> | --design <dir>)\n" +
+    "usage: decks <deck.md> (-o <out.html> | --design <dir>) [--theme <name|.css>]\n" +
       "       decks plan check <plan.json>\n" +
       "       decks plan scaffold <plan.json> -o <deck.md>\n" +
       "       decks theme check <name|path.css>\n" +

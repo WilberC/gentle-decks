@@ -12,7 +12,7 @@ import { openRequests, readStudioPid, replyProblem, replyToRequest, resolveReque
 import { startStudio } from "../src/studio/server.js";
 
 const USAGE = [
-  "usage: decks <deck.md> (-o <out.html> | --design <dir>)",
+  "usage: decks <deck.md> (-o <out.html> | --design <dir>) [--theme <name|.css>]",
   "       decks plan check <plan.json>",
   "       decks plan scaffold <plan.json> -o <deck.md>",
   "       decks theme check <name|path.css>",
@@ -68,8 +68,11 @@ function planCommand() {
 }
 
 // A deck resolves its theme next to itself first (`<deck dir>/themes/<name>.css`), then in the
-// user themes dir, then in the repo (see FORMAT.md, "Themes").
+// user themes dir, then in the repo (see FORMAT.md, "Themes"). A `.css` path loads as-is: the
+// visual workshop iterates on drafts that may not pass the whole contract yet.
 function deckTheme(themeName, deckDir) {
+  if (/\.css$/i.test(themeName)) return fs.readFileSync(path.resolve(themeName), "utf8");
+  if (!THEME_NAME.test(themeName)) throw new Error(`invalid theme name ${JSON.stringify(themeName)}`);
   const theme = findTheme(themeName, deckDir);
   if (!theme) throw new Error(`theme not found: ${themeName}`);
   return theme.css;
@@ -78,7 +81,7 @@ function deckTheme(themeName, deckDir) {
 async function buildCommand() {
   const outFile = flagValue("-o");
   const designDir = flagValue("--design");
-  const input = args.find((a, k) => !a.startsWith("-") && !["-o", "--design"].includes(args[k - 1]));
+  const input = args.find((a, k) => !a.startsWith("-") && !["-o", "--design", "--theme"].includes(args[k - 1]));
   if (!input || (outFile === undefined) === (designDir === undefined) || !(outFile || designDir)) usage();
 
   const md = fs.readFileSync(input, "utf8");
@@ -87,7 +90,7 @@ async function buildCommand() {
 
   try {
     const slides = assignIds(parsed);
-    const themeCss = deckTheme(meta.theme || "gentleman-cute", path.dirname(path.resolve(input)));
+    const themeCss = deckTheme(flagValue("--theme") || meta.theme || "gentleman-cute", path.dirname(path.resolve(input)));
     if (designDir) {
       const files = renderDesign({ meta, slides }, themeCss);
       const dir = path.resolve(designDir);

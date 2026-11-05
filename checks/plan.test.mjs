@@ -151,6 +151,6 @@ test("plan commands without arguments print usage and exit 2", () => {
     const r = run(...args);
     assert.equal(r.code, 2, args.join(" "));
     assert.equal(r.stdout, "");
-    assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\)\n/);
+    assert.match(r.stderr, /^usage: decks <deck\.md> \(-o <out\.html> \| --design <dir>\) \[--theme <name|\.css>\]\n/);
   }
 });
