@@ -33,11 +33,11 @@ Requires Node.js 18 or later.
 
 | Feature | What it does |
 | --- | --- |
-| **Guided flow** | The agent asks about audience, goal and length, proposes an outline, then writes slide by slide. |
-| **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. |
-| **One file out** | Theme CSS and navigation are inlined. Arrows or swipe to navigate, `F` fullscreen, `P` to export to PDF. |
+| **Guided flow** | The agent asks about audience, goal and length, proposes an outline, then writes slide by slide. Every content slide carries a visual element: figures with embedded images, charts, terminal blocks, structured layouts. |
+| **Studio** | A local web app to edit the outline, pick a theme, and comment on slides while the agent writes. Comments go one by one or in batches; a banner shows the writing queue; approving hands delivery to the agent and shuts the studio down. |
+| **One file out** | Theme CSS, navigation and every image are inlined (self-contained HTML, so PDF export never loses images), with slides in the established outline order. Arrows or swipe to navigate, `F` fullscreen, `P` to export to PDF, plus an Export download from the studio. |
 | **Small diffs** | The same markdown always renders byte-identical HTML, so a fix is an edit to one slide. |
-| **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic. Keep your own in `~/.config/gentle-decks/themes/` to use them in every deck ([where themes live](docs/themes.md)). |
+| **Themes** | `gentleman-cute`, `fair-test` and `fair-test-gentle`, or have the agent propose a new one for your topic — from the chat, from a reference image or PDF, or designed as visual directions on the gentle-design canvas before it becomes CSS. Manage your own in the studio's **Mis estilos** view ([where themes live](docs/themes.md)). |
 
 What the rendered slides look like (`gentleman-cute` theme):
 

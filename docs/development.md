@@ -24,6 +24,7 @@ pi -e ./          # load this checkout as a Pi package for one session
 | `bin/decks.js` | CLI entry |
 | `src/parse.js` | Frontmatter, slide splitting, container tree |
 | `src/render.js` | Markdown and containers → slide HTML |
+| `src/embed.js` | Inlines every readable image as a data URI at build time |
 | `src/design.js` | Per-slide canvas artboards and `design.json` |
 | `src/plan.js` | `plan.json` validation and deck scaffolding |
 | `src/theme.js` | Theme contract check |
