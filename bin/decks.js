@@ -9,6 +9,7 @@ import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
 import { deckPdf } from "../src/pdf.js";
 import { missingSelectors, findTheme, THEME_NAME } from "../src/theme.js";
+import { checkForUpdate } from "../src/update-check.js";
 import { openRequests, readStudioPid, replyProblem, replyToRequest, resolveRequests, studioPaths } from "../src/studio/state.js";
 import { startStudio } from "../src/studio/server.js";
 
@@ -252,4 +253,19 @@ function studioServerCommand(dir) {
   );
 }
 
+// S1/S2: the update check is advisory. It starts once the arguments are parsed, runs alongside
+// the command, and never holds an error path (those exit immediately) or a successful one for
+// more than the short registry timeout. It speaks only to an interactive terminal, so scripts,
+// pipes and tests keep reading just the command's own output.
+function reportUpdate() {
+  if (!process.stderr.isTTY) return;
+  checkForUpdate().then(
+    (warning) => {
+      if (warning) process.stderr.write(warning);
+    },
+    () => {},
+  );
+}
+
+reportUpdate();
 main();
