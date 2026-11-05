@@ -7,12 +7,14 @@ import { renderDeck } from "../src/render.js";
 import { embedImages } from "../src/embed.js";
 import { renderDesign, SLIDES_DIR } from "../src/design.js";
 import { readPlan, scaffoldDeck } from "../src/plan.js";
+import { deckPdf } from "../src/pdf.js";
 import { missingSelectors, findTheme, THEME_NAME } from "../src/theme.js";
 import { openRequests, readStudioPid, replyProblem, replyToRequest, resolveRequests, studioPaths } from "../src/studio/state.js";
 import { startStudio } from "../src/studio/server.js";
 
 const USAGE = [
   "usage: decks <deck.md> (-o <out.html> | --design <dir>) [--theme <name|.css>]",
+  "       decks pdf <deck.md> [-o <out.pdf>]",
   "       decks plan check <plan.json>",
   "       decks plan scaffold <plan.json> -o <deck.md>",
   "       decks theme check <name|path.css>",
@@ -116,6 +118,21 @@ async function buildCommand() {
   }
 }
 
+// S4: the PDF prints the same self-contained deck (embedded images, plan order) with headless Chrome.
+function pdfCommand() {
+  const out = flagValue("-o");
+  if (args.indexOf("-o") !== -1 && out === undefined) usage();
+  const input = args.find((a, k) => k > 0 && !a.startsWith("-") && args[k - 1] !== "-o");
+  if (!input) usage();
+  deckPdf({ deck: input, out }).then(
+    (file) => console.log(`pdf -> ${file}`),
+    (err) => {
+      console.error(`pdf: ${err.message}`);
+      process.exit(1);
+    },
+  );
+}
+
 function themeCommand() {
   const [, sub, name] = args;
   if (sub !== "check" || !name) usage();
@@ -142,6 +159,7 @@ function themeCommand() {
 function main() {
   if (args[0] === "plan") return planCommand();
   if (args[0] === "theme") return themeCommand();
+  if (args[0] === "pdf") return pdfCommand();
   if (args[0] !== "studio") return buildCommand();
 
   const sub = args[1];
