@@ -59,6 +59,20 @@ falling back to another browser, and the error lists every source it tried. PDF
 export also needs Node.js 22 or newer for the built-in WebSocket the DevTools
 protocol uses; the rest of the CLI still runs on Node.js 18.
 
+## Update check
+
+The CLI compares its own version with the latest published `gentle-decks` and
+warns once per outdated pair, so an old install gets a single heads-up instead
+of a nag: "gentle-decks 0.2.1 is not the latest published version (0.3.0); run
+`npm i -g gentle-decks` to update." The registry
+(`https://registry.npmjs.org/gentle-decks/latest`) is re-read at most once a
+day, with a short timeout that fails silently offline, and the cached answer
+lives in `$XDG_CONFIG_HOME/gentle-decks/update-check.json`
+(`~/.config/gentle-decks/update-check.json` by default, `$GENTLE_DECKS_THEMES`
+when that relocates the user themes dir). The check never fails or slows a
+command and speaks only to an interactive terminal; set
+`GENTLE_DECKS_NO_UPDATE_CHECK=1` to opt out.
+
 ## Determinism
 
 The same markdown always produces byte-identical HTML, so a correction is a
