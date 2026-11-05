@@ -239,10 +239,78 @@
     .progress, .counter, .brand, .hint, .petals, .touch-nav { display: none; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
+
+/* motion: entrance animations and deck transitions (inlined in the single-file export) */
+.deck { --enter-duration: .5s; --enter-stagger: 80ms; }
+@keyframes deck-enter-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes deck-enter-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes deck-enter-rise { from { opacity: 0; transform: translateY(34px) scale(.985); } to { opacity: 1; transform: none; } }
+
+/* A slide with animate: staggers its direct children; re-adding .active replays the entrance. */
+.slide[data-animate].active > *:not([data-animate]) {
+  animation-duration: var(--enter-duration);
+  animation-timing-function: cubic-bezier(.22, .61, .36, 1);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--i, 0) * var(--enter-stagger));
+}
+.slide[data-animate="fade"].active > *:not([data-animate]) { animation-name: deck-enter-fade; }
+.slide[data-animate="fade-up"].active > *:not([data-animate]) { animation-name: deck-enter-fade-up; }
+.slide[data-animate="rise"].active > *:not([data-animate]) { animation-name: deck-enter-rise; }
+.slide[data-animate].active > *:nth-child(1) { --i: 0; }
+.slide[data-animate].active > *:nth-child(2) { --i: 1; }
+.slide[data-animate].active > *:nth-child(3) { --i: 2; }
+.slide[data-animate].active > *:nth-child(4) { --i: 3; }
+.slide[data-animate].active > *:nth-child(5) { --i: 4; }
+.slide[data-animate].active > *:nth-child(6) { --i: 5; }
+.slide[data-animate].active > *:nth-child(7) { --i: 6; }
+.slide[data-animate].active > *:nth-child(8) { --i: 7; }
+.slide[data-animate].active > *:nth-child(9) { --i: 8; }
+.slide[data-animate].active > *:nth-child(10) { --i: 9; }
+.slide[data-animate].active > *:nth-child(11) { --i: 10; }
+.slide[data-animate].active > *:nth-child(12) { --i: 11; }
+.slide[data-animate].active > *:nth-child(13) { --i: 12; }
+.slide[data-animate].active > *:nth-child(14) { --i: 13; }
+.slide[data-animate].active > *:nth-child(15) { --i: 14; }
+.slide[data-animate].active > *:nth-child(16) { --i: 15; }
+.slide[data-animate].active > *:nth-child(n + 17) { --i: 16; }
+
+/* Container markers animate their own block and opt out of the slide stagger. */
+.slide.active [data-animate="fade"],
+.slide.active [data-animate="fade-up"],
+.slide.active [data-animate="rise"] {
+  animation-duration: var(--enter-duration);
+  animation-timing-function: cubic-bezier(.22, .61, .36, 1);
+  animation-fill-mode: both;
+}
+.slide.active [data-animate="fade"] { animation-name: deck-enter-fade; }
+.slide.active [data-animate="fade-up"] { animation-name: deck-enter-fade-up; }
+.slide.active [data-animate="rise"] { animation-name: deck-enter-rise; }
+
+/* Deck transitions: fade is the crossfade, slide enters with vertical movement, none is instant. */
+.deck.transition-fade .slide { transition: opacity .45s ease, transform .45s ease; }
+.deck.transition-slide .slide { transform: translateY(48px); transition: opacity .5s ease, transform .5s cubic-bezier(.22, .61, .36, 1); }
+.deck.transition-slide .slide.active { transform: none; }
+.deck.transition-none .slide { transition: none; }
+
+/* motion: reduced motion and print always show the final state */
+@media (prefers-reduced-motion: reduce) {
+  .slide[data-animate].active > *:not([data-animate]),
+  .slide.active [data-animate="fade"],
+  .slide.active [data-animate="fade-up"],
+  .slide.active [data-animate="rise"],
+  .deck .slide { animation: none !important; transition: none !important; }
+}
+@media print {
+  .slide[data-animate].active > *:not([data-animate]),
+  .slide.active [data-animate="fade"],
+  .slide.active [data-animate="fade-up"],
+  .slide.active [data-animate="rise"] { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .deck .slide { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
-<div class="deck">
+<div class="deck transition-fade">
 <section class="slide cover active">
 <div class="petals" aria-hidden="true"></div>
 <div class="kicker">Decks · Markdown a presentación</div>

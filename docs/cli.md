@@ -36,6 +36,12 @@ node bin/decks.js theme check gentleman-cute
 
 - **`-o`** writes the presentation. Open it in a browser: arrows, swipe, or
   click to navigate, `F` for fullscreen, `P` to export one slide per page to PDF.
+  Slides with `animate:` stagger their children in, containers with
+  `animate=<profile>` animate on their own, and `transition: fade|slide|none`
+  sets the slide change (default `fade`). The motion CSS travels inside the
+  single file, so it keeps working when the HTML is moved or emailed;
+  `prefers-reduced-motion` disables the motion and printing shows the final
+  state. See [FORMAT.md](../FORMAT.md#motion).
 - **`--design <dir>`** writes `slides/<id>.html` per slide plus `design.json`.
   Canvas comments follow the slide `id`, so they stay attached when slides
   move. Rebuilding removes stale slide files and keeps `comments.json`.
